@@ -62,7 +62,46 @@ export const useAuth = () => {
         return;
       }
 
-      if (profile) {
+      if (!profile) {
+        // Profile doesn't exist, create it from user metadata
+        const metadata = session.user.user_metadata || {};
+        const walletAddress = metadata.wallet_address;
+        
+        if (walletAddress) {
+          const { data: newProfile, error: createError } = await supabase
+            .from('user_profiles')
+            .insert({
+              id: session.user.id,
+              wallet_address: walletAddress.toLowerCase(),
+              farcaster_fid: metadata.farcaster_fid,
+              username: metadata.username,
+              total_games: 0,
+              total_wins: 0,
+              total_tokens_won: 0
+            })
+            .select()
+            .single();
+
+          if (createError) {
+            console.error('Profile creation error:', createError);
+            return;
+          }
+
+          if (newProfile) {
+            setUser(newProfile);
+            setSession({
+              user: {
+                id: session.user.id,
+                wallet_address: newProfile.wallet_address
+              },
+              access_token: session.access_token,
+              refresh_token: session.refresh_token
+            });
+            setIsAuthenticated(true);
+          }
+        }
+      } else {
+        // Profile exists, use it
         setUser(profile);
         setSession({
           user: {

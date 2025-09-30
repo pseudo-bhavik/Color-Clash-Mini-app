@@ -63,13 +63,24 @@ export const useWallet = () => {
 
   const connectWallet = async () => {
     try {
+      // Signal Farcaster SDK ready immediately when connection is attempted
+      if (window.farcaster?.sdk?.ready) {
+        console.log('Calling Farcaster SDK ready...');
+        window.farcaster.sdk.ready();
+      }
+
       // Try Farcaster MiniApp connector first
       const farcasterConnector = connectors.find(c => c.id === 'farcasterMiniApp');
       const injectedConnector = connectors.find(c => c.id === 'injected');
       
+      console.log('Available connectors:', connectors.map(c => c.id));
+      console.log('Farcaster environment detected:', !!window.farcaster);
+      
       if (farcasterConnector) {
         try {
+          console.log('Attempting Farcaster connection...');
           await connect({ connector: farcasterConnector });
+          console.log('Farcaster connection successful!');
           return;
         } catch (farcasterError) {
           console.log('Farcaster connection failed, trying injected wallet:', farcasterError);
@@ -78,6 +89,7 @@ export const useWallet = () => {
       
       // Fallback to injected wallet (MetaMask, etc.)
       if (injectedConnector) {
+        console.log('Attempting injected wallet connection...');
         await connect({ connector: injectedConnector });
       } else {
         throw new Error('No wallet connector available');

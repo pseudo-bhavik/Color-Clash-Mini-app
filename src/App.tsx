@@ -49,10 +49,21 @@ function AppContent() {
 
   // Initialize Farcaster SDK
   useEffect(() => {
-    // Signal to Farcaster that the MiniApp is ready
-    if (window.farcaster?.sdk?.ready) {
-      window.farcaster.sdk.ready();
-    }
+    // Initial Farcaster SDK setup
+    const initializeFarcaster = () => {
+      if (window.farcaster?.sdk?.ready) {
+        console.log('Farcaster SDK detected, calling ready on app initialization...');
+        window.farcaster.sdk.ready();
+      } else {
+        console.log('Farcaster SDK not detected on app initialization');
+      }
+    };
+
+    // Try immediately and also after a short delay in case SDK loads asynchronously
+    initializeFarcaster();
+    const timeout = setTimeout(initializeFarcaster, 1000);
+
+    return () => clearTimeout(timeout);
   }, []);
 
   const handleStartGame = () => {

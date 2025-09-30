@@ -1,12 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase, UserProfile, AuthSession } from '../lib/supabase';
-import { ethers, sha256, toUtf8Bytes } from 'ethers';
+import { ethers } from 'ethers';
 
 export const useAuth = () => {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [session, setSession] = useState<AuthSession | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
 
   // Check for existing session on mount
   useEffect(() => {
@@ -41,6 +42,7 @@ export const useAuth = () => {
           setUser(null);
           setSession(null);
           setIsAuthenticated(false);
+          setAuthError(null);
         }
       }
     );
@@ -121,26 +123,63 @@ export const useAuth = () => {
   const authenticateWithWallet = useCallback(async (
     walletAddress: string, 
     signer: ethers.JsonRpcSigner,
+    signedMessage: string,
     farcasterFid?: string,
     username?: string
   ) => {
     try {
       setLoading(true);
+      setAuthError(null);
 
+      // Step 3: Request to Backend Authentication Service
+      const authResponse = await authenticateWithBackend(walletAddress, signedMessage, farcasterFid, username);
+
+      if (authResponse.success) {
+        // Step 5: Client-Side Session Management
+        const { sessionToken, userProfile } = authResponse;
+        
+        // Store session token securely
+        localStorage.setItem('colorclash_session_token', sessionToken);
+        
+        // Update user state
+        setUser(userProfile);
+        setSession({
+          user: {
+            id: userProfile.id,
+            wallet_address: userProfile.wallet_address
+          },
+          access_token: sessionToken,
+          refresh_token: sessionToken
+        });
+        setIsAuthenticated(true);
+        
+        return { success: true, user: userProfile };
+      } else {
+        throw new Error(authResponse.error || 'Authentication failed');
+      }
+    } catch (error) {
+      console.error('Wallet authentication error:', error);
+      setAuthError(error instanceof Error ? error.message : 'Authentication failed');
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Step 4: Backend Authentication Service Processing
+  const authenticateWithBackend = async (
+    walletAddress: string,
+    signedMessage: string,
+    farcasterFid?: string,
+    username?: string
+  ) => {
+    try {
       // Create a valid email format for Supabase
-      // Remove 0x prefix and ensure valid email format
       const cleanAddress = walletAddress.toLowerCase().replace('0x', '');
       const email = `wallet_${cleanAddress}@colorclash.app`;
 
-      // Create a message to sign for authentication
-      const message = `Sign this message to authenticate with Color Clash.\n\nWallet: ${walletAddress}\nTimestamp: ${Date.now()}`;
-      
-      // Sign the message
-      const signature = await signer.signMessage(message);
-
-      // Hash the signature to ensure it fits within Supabase's 72-character password limit
-      // Ethereum signatures are 130+ characters, but SHA256 hash is always 64 characters (+ 0x prefix = 66 total)
-      const hashedPassword = sha256(toUtf8Bytes(signature));
+      // Hash the signed message to create a consistent password
+      const hashedPassword = await hashMessage(signedMessage);
 
       // Authenticate with Supabase using the signed message
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -149,7 +188,7 @@ export const useAuth = () => {
       });
 
       if (error && error.message.includes('Invalid login credentials')) {
-        // User doesn't exist, create account
+        // Step 4b: New User - Create account
         const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
           email: email,
           password: hashedPassword,
@@ -164,7 +203,7 @@ export const useAuth = () => {
 
         if (signUpError) {
           console.error('Sign up error:', signUpError);
-          throw signUpError;
+          return { success: false, error: signUpError.message };
         }
 
         if (signUpData.user) {
@@ -183,23 +222,70 @@ export const useAuth = () => {
 
           if (profileError) {
             console.error('Profile creation error:', profileError);
+            return { success: false, error: 'Failed to create user profile' };
           }
+          
+          // Return success with new user data
+          const newProfile = {
+            id: signUpData.user.id,
+            wallet_address: walletAddress.toLowerCase(),
+            farcaster_fid: farcasterFid,
+            username: username,
+            total_games: 0,
+            total_wins: 0,
+            total_tokens_won: 0,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          };
+          
+          return {
+            success: true,
+            sessionToken: signUpData.session?.access_token || '',
+            userProfile: newProfile
+          };
         }
-
-        return signUpData;
       } else if (error) {
         console.error('Sign in error:', error);
-        throw error;
+        return { success: false, error: error.message };
+      } else if (data.user) {
+        // Step 4a: Existing User - Retrieve profile
+        const { data: profile, error: profileError } = await supabase
+          .from('user_profiles')
+          .select('*')
+          .eq('id', data.user.id)
+          .single();
+          
+        if (profileError) {
+          console.error('Profile fetch error:', profileError);
+          return { success: false, error: 'Failed to fetch user profile' };
+        }
+        
+        return {
+          success: true,
+          sessionToken: data.session?.access_token || '',
+          userProfile: profile
+        };
       }
 
-      return data;
+      return { success: false, error: 'Unknown authentication error' };
     } catch (error) {
-      console.error('Wallet authentication error:', error);
-      throw error;
-    } finally {
-      setLoading(false);
+      console.error('Backend authentication error:', error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Authentication service error' 
+      };
     }
-  }, []);
+  };
+
+  // Helper function to hash messages consistently
+  const hashMessage = async (message: string): Promise<string> => {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(message);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    return hashHex;
+  };
 
   const updateUserStats = useCallback(async (
     gamesPlayed: number,
@@ -239,6 +325,7 @@ export const useAuth = () => {
 
   const signOut = useCallback(async () => {
     try {
+      localStorage.removeItem('colorclash_session_token');
       await supabase.auth.signOut();
     } catch (error) {
       console.error('Sign out error:', error);
@@ -249,6 +336,7 @@ export const useAuth = () => {
     user,
     session,
     loading,
+    authError,
     isAuthenticated,
     authenticateWithWallet,
     updateUserStats,

@@ -145,11 +145,30 @@ export const useWallet = () => {
     }
 
     try {
+      // Step 1: User Initiates Authentication (already done by calling this function)
+      
+      // Step 2: Client-Side Identity Provider Interaction
+      console.log('Starting identity verification process...');
+      
+      // Create a message to sign for authentication
+      const timestamp = Date.now();
+      const message = `Sign this message to authenticate with Color Clash.\n\nWallet: ${address}\nTimestamp: ${timestamp}\n\nThis signature will not trigger any blockchain transaction or cost any gas fees.`;
+      
+      console.log('Requesting message signature from wallet...');
+      
+      // Step 2c: Identity Confirmation - User signs message to prove ownership
+      const signedMessage = await signer.signMessage(message);
+      
+      console.log('Message signed successfully, proceeding with authentication...');
+      
       // Try to get Farcaster context if available
       const farcasterFid = (window as any).farcaster?.user?.fid;
       const username = (window as any).farcaster?.user?.username;
       
-      await authenticateWithWallet(address, signer, farcasterFid, username);
+      // Step 3: Request to Backend Authentication Service
+      await authenticateWithWallet(address, signer, signedMessage, farcasterFid, username);
+      
+      console.log('Authentication completed successfully!');
     } catch (error) {
       console.error('Authentication failed:', error);
       throw error;

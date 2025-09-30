@@ -44,29 +44,32 @@ function AppContent() {
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const { rouletteKeys, addRouletteKeys, spendRouletteKeys, dailyGames, canPlayToday, incrementDailyGames } = useRouletteKeys();
   const { connectWallet, authenticateUser, isConnected, isAuthenticated, walletAddress, signer } = useWallet();
-  const { user, updateUserStats } = useAuth();
+  const { user, updateUserStats, authError } = useAuth();
   const { leaderboard, updateLeaderboard } = useLeaderboard();
   const { toasts, removeToast, success, error, info, warning } = useToast();
 
-  // Auto-authenticate when wallet connects
+  // Step 2 & 3: Auto-authenticate when wallet connects (Client-Side Identity Provider Interaction)
   useEffect(() => {
     const handleAutoAuthentication = async () => {
-      // Only auto-authenticate if:
-      // 1. Wallet is connected
-      // 2. User is not already authenticated
-      // 3. We're not already in the process of authenticating
-      // 4. We have a signer available
+      // Step 6: User-Specific Data Loading happens automatically after authentication
       if (isConnected && !isAuthenticated && !isAuthenticating && signer) {
-        console.log('Wallet connected, starting auto-authentication...');
+        console.log('Step 2: Wallet connected, initiating authentication flow...');
         setIsAuthenticating(true);
         
         try {
+          // This triggers the full authentication flow (Steps 2-5)
           await authenticateUser();
-          console.log('Auto-authentication successful!');
-          success('Wallet connected and authenticated successfully!');
+          console.log('Step 5: Authentication flow completed successfully!');
+          success('🎉 Welcome! Your wallet is connected and authenticated.');
         } catch (error) {
-          console.error('Auto-authentication failed:', error);
-          error('Authentication failed. Please try again.');
+          console.error('Authentication flow failed:', error);
+          const errorMessage = error instanceof Error ? error.message : 'Authentication failed';
+          
+          if (errorMessage.includes('user rejected') || errorMessage.includes('User denied')) {
+            warning('Authentication cancelled. Please try again when ready.');
+          } else {
+            error(`Authentication failed: ${errorMessage}`);
+          }
         } finally {
           setIsAuthenticating(false);
         }
@@ -76,7 +79,7 @@ function AppContent() {
     // Small delay to ensure signer is available
     const timeoutId = setTimeout(handleAutoAuthentication, 500);
     return () => clearTimeout(timeoutId);
-  }, [isConnected, isAuthenticated, isAuthenticating, signer, authenticateUser, success, error]);
+  }, [isConnected, isAuthenticated, isAuthenticating, signer, authenticateUser, success, error, warning]);
 
   // Initialize Farcaster SDK
   useEffect(() => {

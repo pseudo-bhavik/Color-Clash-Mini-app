@@ -29,20 +29,28 @@ const HomeScreen: React.FC<HomeScreenProps> = ({
 }) => {
   const handleConnectWallet = async () => {
     try {
-      console.log('Starting wallet connection...');
+      console.log('Step 1: User initiated authentication - starting wallet connection...');
       await onConnectWallet();
     } catch (error) {
       console.error('Wallet connection failed:', error);
-      alert('Failed to connect wallet. Please try again.');
+      // More user-friendly error handling
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      
+      if (errorMessage.includes('User rejected') || errorMessage.includes('user denied')) {
+        // User cancelled - don't show error, just log it
+        console.log('User cancelled wallet connection');
+      } else {
+        alert(`Failed to connect wallet: ${errorMessage}\n\nPlease try again or check your wallet extension.`);
+      }
     }
   };
 
   const getConnectButtonText = () => {
     if (isAuthenticating) {
-      return 'AUTHENTICATING...';
+      return 'SIGNING MESSAGE...';
     }
     if (isConnected && !isAuthenticated) {
-      return 'AUTHENTICATING...';
+      return 'PLEASE SIGN MESSAGE';
     }
     return 'CONNECT WALLET';
   };
@@ -90,6 +98,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({
       {/* Action Buttons */}
       <div className="space-y-4 w-full max-w-sm z-10">
         {!isAuthenticated && (
+          /* Step 1: User Initiates Authentication */
           <button
             onClick={handleConnectWallet}
             disabled={isConnectButtonDisabled()}
@@ -113,7 +122,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({
               </>
             ) : (
               <>
-                <Shield size={32} className={isAuthenticating ? 'animate-pulse' : ''} />
+                <Shield size={32} className={isAuthenticating ? 'animate-spin' : ''} />
                 <span>{getConnectButtonText()}</span>
               </>
             )}
@@ -161,11 +170,13 @@ const HomeScreen: React.FC<HomeScreenProps> = ({
       {!isAuthenticated && (
         <p className="text-[#333333] text-sm mt-4 text-center opacity-70 z-10">
           {isAuthenticating 
-            ? 'Please sign the message in your wallet to authenticate...' 
-            : 'Connect your wallet to start playing and earning rewards!'
+            ? '🔐 Please check your wallet and sign the message to complete authentication...' 
+            : '🎮 Connect your wallet to start playing and earning $CC tokens!'
           }
         </p>
       )}
+      
+      {/* Step 7: User Interface Updates - Show authentication status */}
       {!canPlayToday && (
         <p className="text-[#333333] text-sm mt-4 text-center opacity-70 z-10">
           Daily limit reached! Come back tomorrow for more games.

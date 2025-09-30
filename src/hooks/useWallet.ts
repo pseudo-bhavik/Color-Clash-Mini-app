@@ -10,21 +10,18 @@ export const useWallet = () => {
   const { disconnect } = useDisconnect();
   const publicClient = usePublicClient();
   const { data: walletClient } = useWalletClient();
-  
+
   const [provider, setProvider] = useState<ethers.BrowserProvider | null>(null);
   const [signer, setSigner] = useState<ethers.JsonRpcSigner | null>(null);
   const { authenticateWithWallet, isAuthenticated: isAuthAuthenticated } = useAuth();
 
-  // Update provider and signer when wallet client changes
   useEffect(() => {
     const updateProviderAndSigner = async () => {
       if (walletClient && isConnected) {
         try {
-          // Create ethers provider from wagmi client
           const ethersProvider = new ethers.BrowserProvider(walletClient.transport as any);
           setProvider(ethersProvider);
 
-          // Get signer
           const ethSigner = await ethersProvider.getSigner();
           setSigner(ethSigner);
         } catch (error) {
@@ -41,19 +38,16 @@ export const useWallet = () => {
     updateProviderAndSigner();
   }, [walletClient, isConnected]);
 
-
   const connectWallet = async () => {
     try {
-      // Signal Farcaster SDK ready immediately when connection is attempted
       if (typeof window !== 'undefined' && window.farcaster?.sdk?.ready) {
         console.log('Calling Farcaster SDK ready...');
         window.farcaster.sdk.ready();
       }
 
-      // Check if we're in a Farcaster environment
-      const isFarcasterEnv = typeof window !== 'undefined' && 
+      const isFarcasterEnv = typeof window !== 'undefined' &&
         (window.farcaster || window.parent !== window);
-      
+
       console.log('Environment check:', {
         isFarcasterEnv,
         hasFarcasterObject: !!window.farcaster,
@@ -61,14 +55,12 @@ export const useWallet = () => {
         userAgent: navigator.userAgent
       });
 
-      // Try Farcaster MiniApp connector first
       const farcasterConnector = connectors.find(c => c.id === 'farcasterMiniApp');
       const injectedConnector = connectors.find(c => c.id === 'injected');
-      
+
       console.log('Available connectors:', connectors.map(c => c.id));
       console.log('Farcaster connector available:', !!farcasterConnector);
-      
-      // Prioritize Farcaster connector in Farcaster environments
+
       if (farcasterConnector && isFarcasterEnv) {
         try {
           console.log('Attempting Farcaster connection...');
@@ -77,11 +69,9 @@ export const useWallet = () => {
           return;
         } catch (farcasterError) {
           console.log('Farcaster connection failed, trying injected wallet:', farcasterError);
-          // Don't throw here, fall through to injected wallet
         }
       }
-      
-      // Fallback to injected wallet (MetaMask, etc.)
+
       if (injectedConnector) {
         console.log('Attempting injected wallet connection...');
         try {
@@ -94,15 +84,12 @@ export const useWallet = () => {
       } else if (!farcasterConnector) {
         throw new Error('No wallet connector available');
       } else {
-        // If we have farcaster connector but it failed and no injected, try farcaster again
         console.log('Retrying Farcaster connection as last resort...');
         await connect({ connector: farcasterConnector });
       }
-      
-      // Check if we're on the correct network (Arbitrum)
+
       if (chainId && chainId !== arbitrum.id) {
         console.log(`Wrong network detected. Current: ${chainId}, Expected: ${arbitrum.id}`);
-        // Request network switch
         if (typeof window !== 'undefined' && window.ethereum) {
           try {
             console.log('Requesting network switch to Arbitrum...');
@@ -112,7 +99,6 @@ export const useWallet = () => {
             });
             console.log('Network switch successful');
           } catch (switchError: any) {
-            // If the chain hasn't been added to the wallet, add it
             if (switchError.code === 4902) {
               console.log('Adding Arbitrum network to wallet...');
               await window.ethereum.request({
@@ -145,35 +131,20 @@ export const useWallet = () => {
     }
 
     try {
-      // Step 1: User Initiates Authentication (already done by calling this function)
-      
-      // Step 2: Client-Side Identity Provider Interaction
-      console.log('Starting identity verification process...');
-      
-      // Create a message to sign for authentication
-      const timestamp = Date.now();
-      const message = `Sign this message to authenticate with Color Clash.\n\nWallet: ${address}\nTimestamp: ${timestamp}\n\nThis signature will not trigger any blockchain transaction or cost any gas fees.`;
-      
-      console.log('Requesting message signature from wallet...');
-      
-      // Step 2c: Identity Confirmation - User signs message to prove ownership
-      const signedMessage = await signer.signMessage(message);
-      
-      console.log('Message signed successfully, proceeding with authentication...');
-      
-      // Try to get Farcaster context if available
+      console.log('Starting authentication process...');
+
       const farcasterFid = (window as any).farcaster?.user?.fid;
       const username = (window as any).farcaster?.user?.username;
-      
-      // Step 3: Request to Backend Authentication Service
-      await authenticateWithWallet(address, signer, signedMessage, farcasterFid, username);
-      
+
+      await authenticateWithWallet(address, signer, farcasterFid, username);
+
       console.log('Authentication completed successfully!');
     } catch (error) {
       console.error('Authentication failed:', error);
       throw error;
     }
   };
+
   const disconnectWallet = () => {
     disconnect();
   };

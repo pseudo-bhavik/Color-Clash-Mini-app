@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { WagmiProvider } from 'wagmi';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { wagmiConfig } from './lib/wagmi';
@@ -43,62 +43,47 @@ function AppContent() {
   const [claimedReward, setClaimedReward] = useState<RouletteReward | null>(null);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const { rouletteKeys, addRouletteKeys, spendRouletteKeys, dailyGames, canPlayToday, incrementDailyGames } = useRouletteKeys();
-  const { connectWallet, authenticateUser, isConnected, isAuthenticated, walletAddress, signer } = useWallet();
-  const { user, updateUserStats, authError } = useAuth();
+  const { connectWallet, authenticateUser, isConnected, isAuthenticated, walletAddress } = useWallet();
+  const { user, updateUserStats } = useAuth();
   const { leaderboard, updateLeaderboard } = useLeaderboard();
   const { toasts, removeToast, success, error, info, warning } = useToast();
 
-  // Step 2 & 3: Auto-authenticate when wallet connects (Client-Side Identity Provider Interaction)
-  useEffect(() => {
-    const handleAutoAuthentication = async () => {
-      // Step 6: User-Specific Data Loading happens automatically after authentication
-      if (isConnected && !isAuthenticated && !isAuthenticating && signer) {
-        console.log('Step 2: Wallet connected, initiating authentication flow...');
-        setIsAuthenticating(true);
-        
-        try {
-          // This triggers the full authentication flow (Steps 2-5)
-          await authenticateUser();
-          console.log('Step 5: Authentication flow completed successfully!');
-          success('🎉 Welcome! Your wallet is connected and authenticated.');
-        } catch (error) {
-          console.error('Authentication flow failed:', error);
-          const errorMessage = error instanceof Error ? error.message : 'Authentication failed';
-          
-          if (errorMessage.includes('user rejected') || errorMessage.includes('User denied')) {
-            warning('Authentication cancelled. Please try again when ready.');
-          } else {
-            error(`Authentication failed: ${errorMessage}`);
-          }
-        } finally {
-          setIsAuthenticating(false);
-        }
-      }
-    };
 
-    // Small delay to ensure signer is available
-    const timeoutId = setTimeout(handleAutoAuthentication, 500);
-    return () => clearTimeout(timeoutId);
-  }, [isConnected, isAuthenticated, isAuthenticating, signer, authenticateUser, success, error, warning]);
-
-  // Initialize Farcaster SDK
   useEffect(() => {
-    // Initial Farcaster SDK setup
     const initializeFarcaster = () => {
       if (window.farcaster?.sdk?.ready) {
         console.log('Farcaster SDK detected, calling ready on app initialization...');
         window.farcaster.sdk.ready();
-      } else {
-        console.log('Farcaster SDK not detected on app initialization');
       }
     };
 
-    // Try immediately and also after a short delay in case SDK loads asynchronously
     initializeFarcaster();
     const timeout = setTimeout(initializeFarcaster, 1000);
 
     return () => clearTimeout(timeout);
   }, []);
+
+  const handleAuthenticate = async () => {
+    if (!isConnected || isAuthenticating) return;
+
+    setIsAuthenticating(true);
+    try {
+      await authenticateUser();
+      success('Welcome! You are now signed in.');
+    } catch (err) {
+      console.error('Authentication failed:', err);
+      const error = err as Error;
+      const errorMessage = error.message || 'Authentication failed';
+
+      if (errorMessage.includes('user rejected') || errorMessage.includes('User denied')) {
+        warning('Sign in cancelled.');
+      } else {
+        error(`Sign in failed: ${errorMessage}`);
+      }
+    } finally {
+      setIsAuthenticating(false);
+    }
+  };
 
   const handleStartGame = () => {
     if (!canPlayToday || !isAuthenticated) return;
@@ -168,7 +153,7 @@ function AppContent() {
       <ToastContainer toasts={toasts} onClose={removeToast} />
 
       {gameState === 'home' && (
-            <HomeScreen 
+            <HomeScreen
               rouletteKeys={rouletteKeys}
               dailyGames={dailyGames}
               canPlayToday={canPlayToday}
@@ -179,6 +164,7 @@ function AppContent() {
               onSpinRoulette={handleSpinRoulette}
               onShowLeaderboard={handleShowLeaderboard}
               onConnectWallet={connectWallet}
+              onAuthenticate={handleAuthenticate}
             />
           )}
           

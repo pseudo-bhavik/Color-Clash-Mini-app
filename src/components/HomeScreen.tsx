@@ -13,31 +13,30 @@ interface HomeScreenProps {
   onSpinRoulette: () => void;
   onShowLeaderboard: () => void;
   onConnectWallet: () => void;
+  onAuthenticate: () => void;
 }
 
-const HomeScreen: React.FC<HomeScreenProps> = ({ 
-  rouletteKeys, 
-  dailyGames, 
-  canPlayToday, 
+const HomeScreen: React.FC<HomeScreenProps> = ({
+  rouletteKeys,
+  dailyGames,
+  canPlayToday,
   isConnected,
   isAuthenticated,
   isAuthenticating,
-  onStartGame, 
-  onSpinRoulette, 
+  onStartGame,
+  onSpinRoulette,
   onShowLeaderboard,
   onConnectWallet,
+  onAuthenticate,
 }) => {
   const handleConnectWallet = async () => {
     try {
-      console.log('Step 1: User initiated authentication - starting wallet connection...');
       await onConnectWallet();
     } catch (error) {
       console.error('Wallet connection failed:', error);
-      // More user-friendly error handling
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      
+
       if (errorMessage.includes('User rejected') || errorMessage.includes('user denied')) {
-        // User cancelled - don't show error, just log it
         console.log('User cancelled wallet connection');
       } else {
         alert(`Failed to connect wallet: ${errorMessage}\n\nPlease try again or check your wallet extension.`);
@@ -45,19 +44,14 @@ const HomeScreen: React.FC<HomeScreenProps> = ({
     }
   };
 
-  const getConnectButtonText = () => {
-    if (isAuthenticating) {
-      return 'SIGNING MESSAGE...';
+  const handleAuthenticate = async () => {
+    try {
+      await onAuthenticate();
+    } catch (error) {
+      console.error('Authentication failed:', error);
     }
-    if (isConnected && !isAuthenticated) {
-      return 'PLEASE SIGN MESSAGE';
-    }
-    return 'CONNECT WALLET';
   };
 
-  const isConnectButtonDisabled = () => {
-    return isAuthenticating || (isConnected && !isAuthenticated);
-  };
   return (
     <div className="h-screen flex flex-col items-center justify-center p-6 relative">
       {/* Background Pattern */}
@@ -97,35 +91,38 @@ const HomeScreen: React.FC<HomeScreenProps> = ({
 
       {/* Action Buttons */}
       <div className="space-y-4 w-full max-w-sm z-10">
-        {!isAuthenticated && (
-          /* Step 1: User Initiates Authentication */
+        {!isConnected && (
           <button
             onClick={handleConnectWallet}
-            disabled={isConnectButtonDisabled()}
-            className={`w-full text-white text-2xl py-4 px-8 rounded-2xl 
+            className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white text-2xl py-4 px-8 rounded-2xl
                        border-4 border-[#333333] shadow-lg hover:from-blue-700 hover:to-blue-800
+                       active:transform active:scale-95 transition-all duration-200
+                       flex items-center justify-center space-x-3"
+          >
+            <Wallet size={32} />
+            <span>CONNECT WALLET</span>
+          </button>
+        )}
+
+        {isConnected && !isAuthenticated && (
+          <button
+            onClick={handleAuthenticate}
+            disabled={isAuthenticating}
+            className={`w-full text-white text-2xl py-4 px-8 rounded-2xl
+                       border-4 border-[#333333] shadow-lg
                        active:transform active:scale-95 transition-all duration-200
                        disabled:opacity-50 disabled:cursor-not-allowed
                        flex items-center justify-center space-x-3 relative overflow-hidden
-                       ${isConnectButtonDisabled() 
-                         ? 'bg-gradient-to-r from-gray-500 to-gray-600' 
-                         : 'bg-gradient-to-r from-blue-600 to-blue-700'
+                       ${isAuthenticating
+                         ? 'bg-gradient-to-r from-gray-500 to-gray-600'
+                         : 'bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800'
                        }`}
           >
             {isAuthenticating && (
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer" />
             )}
-            {!isConnected && !isAuthenticating ? (
-              <>
-                <Wallet size={32} />
-                <span>{getConnectButtonText()}</span>
-              </>
-            ) : (
-              <>
-                <Shield size={32} className={isAuthenticating ? 'animate-spin' : ''} />
-                <span>{getConnectButtonText()}</span>
-              </>
-            )}
+            <Shield size={32} className={isAuthenticating ? 'animate-spin' : ''} />
+            <span>{isAuthenticating ? 'SIGNING IN...' : 'SIGN IN'}</span>
           </button>
         )}
 
@@ -169,10 +166,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({
 
       {!isAuthenticated && (
         <p className="text-[#333333] text-sm mt-4 text-center opacity-70 z-10">
-          {isAuthenticating 
-            ? '🔐 Please check your wallet and sign the message to complete authentication...' 
-            : '🎮 Connect your wallet to start playing and earning $CC tokens!'
-          }
+          {!isConnected && '🎮 Connect your wallet to start playing and earning $CC tokens!'}
+          {isConnected && !isAuthenticating && '🔐 Click Sign In and approve the message in your wallet'}
+          {isAuthenticating && '🔐 Please check your wallet and sign the message...'}
         </p>
       )}
       

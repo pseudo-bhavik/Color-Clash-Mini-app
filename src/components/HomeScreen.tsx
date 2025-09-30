@@ -8,11 +8,11 @@ interface HomeScreenProps {
   canPlayToday: boolean;
   isConnected: boolean;
   isAuthenticated: boolean;
+  isAuthenticating: boolean;
   onStartGame: () => void;
   onSpinRoulette: () => void;
   onShowLeaderboard: () => void;
   onConnectWallet: () => void;
-  onAuthenticate: () => void;
 }
 
 const HomeScreen: React.FC<HomeScreenProps> = ({ 
@@ -21,42 +21,35 @@ const HomeScreen: React.FC<HomeScreenProps> = ({
   canPlayToday, 
   isConnected,
   isAuthenticated,
+  isAuthenticating,
   onStartGame, 
   onSpinRoulette, 
   onShowLeaderboard,
   onConnectWallet,
-  onAuthenticate
 }) => {
-  const handleConnectAndAuth = async () => {
+  const handleConnectWallet = async () => {
     try {
-      console.log('Starting wallet connection and authentication...');
-      if (!isConnected) {
-        console.log('Wallet not connected, attempting connection...');
-        await onConnectWallet();
-        // Wait a moment for wallet connection to complete
-        setTimeout(async () => {
-          try {
-            console.log('Attempting authentication after wallet connection...');
-            await onAuthenticate();
-            console.log('Authentication successful!');
-          } catch (error) {
-            console.error('Authentication failed:', error);
-            // Show user-friendly error message
-            alert('Authentication failed. Please try again.');
-          }
-        }, 1000);
-      } else {
-        console.log('Wallet already connected, attempting authentication...');
-        await onAuthenticate();
-        console.log('Authentication successful!');
-      }
+      console.log('Starting wallet connection...');
+      await onConnectWallet();
     } catch (error) {
-      console.error('Connection/Authentication failed:', error);
-      // Show user-friendly error message
+      console.error('Wallet connection failed:', error);
       alert('Failed to connect wallet. Please try again.');
     }
   };
 
+  const getConnectButtonText = () => {
+    if (isAuthenticating) {
+      return 'AUTHENTICATING...';
+    }
+    if (isConnected && !isAuthenticated) {
+      return 'AUTHENTICATING...';
+    }
+    return 'CONNECT WALLET';
+  };
+
+  const isConnectButtonDisabled = () => {
+    return isAuthenticating || (isConnected && !isAuthenticated);
+  };
   return (
     <div className="h-screen flex flex-col items-center justify-center p-6 relative">
       {/* Background Pattern */}
@@ -98,21 +91,30 @@ const HomeScreen: React.FC<HomeScreenProps> = ({
       <div className="space-y-4 w-full max-w-sm z-10">
         {!isAuthenticated && (
           <button
-            onClick={handleConnectAndAuth}
-            className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white text-2xl py-4 px-8 rounded-2xl 
+            onClick={handleConnectWallet}
+            disabled={isConnectButtonDisabled()}
+            className={`w-full text-white text-2xl py-4 px-8 rounded-2xl 
                        border-4 border-[#333333] shadow-lg hover:from-blue-700 hover:to-blue-800
                        active:transform active:scale-95 transition-all duration-200
-                       flex items-center justify-center space-x-3"
+                       disabled:opacity-50 disabled:cursor-not-allowed
+                       flex items-center justify-center space-x-3 relative overflow-hidden
+                       ${isConnectButtonDisabled() 
+                         ? 'bg-gradient-to-r from-gray-500 to-gray-600' 
+                         : 'bg-gradient-to-r from-blue-600 to-blue-700'
+                       }`}
           >
-            {!isConnected ? (
+            {isAuthenticating && (
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer" />
+            )}
+            {!isConnected && !isAuthenticating ? (
               <>
                 <Wallet size={32} />
-                <span>CONNECT WALLET</span>
+                <span>{getConnectButtonText()}</span>
               </>
             ) : (
               <>
-                <Shield size={32} />
-                <span>AUTHENTICATE</span>
+                <Shield size={32} className={isAuthenticating ? 'animate-pulse' : ''} />
+                <span>{getConnectButtonText()}</span>
               </>
             )}
           </button>
@@ -158,7 +160,10 @@ const HomeScreen: React.FC<HomeScreenProps> = ({
 
       {!isAuthenticated && (
         <p className="text-[#333333] text-sm mt-4 text-center opacity-70 z-10">
-          Connect your wallet to start playing and earning rewards!
+          {isAuthenticating 
+            ? 'Please sign the message in your wallet to authenticate...' 
+            : 'Connect your wallet to start playing and earning rewards!'
+          }
         </p>
       )}
       {!canPlayToday && (

@@ -41,11 +41,42 @@ function AppContent() {
   const [gameState, setGameState] = useState<GameState | 'leaderboard'>('home');
   const [gameResult, setGameResult] = useState<GameResult | null>(null);
   const [claimedReward, setClaimedReward] = useState<RouletteReward | null>(null);
+  const [isAuthenticating, setIsAuthenticating] = useState(false);
   const { rouletteKeys, addRouletteKeys, spendRouletteKeys, dailyGames, canPlayToday, incrementDailyGames } = useRouletteKeys();
   const { connectWallet, authenticateUser, isConnected, isAuthenticated, walletAddress, signer } = useWallet();
   const { user, updateUserStats } = useAuth();
   const { leaderboard, updateLeaderboard } = useLeaderboard();
   const { toasts, removeToast, success, error, info, warning } = useToast();
+
+  // Auto-authenticate when wallet connects
+  useEffect(() => {
+    const handleAutoAuthentication = async () => {
+      // Only auto-authenticate if:
+      // 1. Wallet is connected
+      // 2. User is not already authenticated
+      // 3. We're not already in the process of authenticating
+      // 4. We have a signer available
+      if (isConnected && !isAuthenticated && !isAuthenticating && signer) {
+        console.log('Wallet connected, starting auto-authentication...');
+        setIsAuthenticating(true);
+        
+        try {
+          await authenticateUser();
+          console.log('Auto-authentication successful!');
+          success('Wallet connected and authenticated successfully!');
+        } catch (error) {
+          console.error('Auto-authentication failed:', error);
+          error('Authentication failed. Please try again.');
+        } finally {
+          setIsAuthenticating(false);
+        }
+      }
+    };
+
+    // Small delay to ensure signer is available
+    const timeoutId = setTimeout(handleAutoAuthentication, 500);
+    return () => clearTimeout(timeoutId);
+  }, [isConnected, isAuthenticated, isAuthenticating, signer, authenticateUser, success, error]);
 
   // Initialize Farcaster SDK
   useEffect(() => {
@@ -140,11 +171,11 @@ function AppContent() {
               canPlayToday={canPlayToday}
               isConnected={isConnected}
               isAuthenticated={isAuthenticated}
+              isAuthenticating={isAuthenticating}
               onStartGame={handleStartGame}
               onSpinRoulette={handleSpinRoulette}
               onShowLeaderboard={handleShowLeaderboard}
               onConnectWallet={connectWallet}
-              onAuthenticate={authenticateUser}
             />
           )}
           

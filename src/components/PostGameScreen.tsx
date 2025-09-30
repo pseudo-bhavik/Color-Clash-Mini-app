@@ -200,7 +200,7 @@ const PostGameScreen: React.FC<PostGameScreenProps> = ({
                        flex items-center justify-center space-x-2"
           >
             <Link size={24} />
-            <span>CONNECT WALLET TO RECORD SCORE</span>
+            <span>CONNECT WALLET</span>
           </button>
         )}
 

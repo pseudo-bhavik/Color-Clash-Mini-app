@@ -48,8 +48,13 @@ const RewardClaimedModal: React.FC<RewardClaimedModalProps> = ({
       return;
     }
 
-    if (!walletAddress || !signer) {
-      alert('Please connect and authenticate your wallet first');
+    if (!walletAddress) {
+      alert('Please connect your wallet first');
+      return;
+    }
+
+    if (!signer) {
+      alert('Wallet connection error. Please reconnect your wallet.');
       return;
     }
 

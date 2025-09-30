@@ -55,8 +55,13 @@ const RouletteScreen: React.FC<RouletteScreenProps> = ({
   };
 
   const handleClaimReward = async (rewardAmount: number) => {
-    if (!walletAddress || !signer) {
-      showToast.error('Please connect and authenticate your wallet first');
+    if (!walletAddress) {
+      showToast.error('Please connect your wallet first');
+      return;
+    }
+
+    if (!signer) {
+      showToast.error('Wallet connection error. Please reconnect your wallet.');
       return;
     }
 

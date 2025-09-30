@@ -45,19 +45,31 @@ export const useWallet = () => {
   const connectWallet = async () => {
     try {
       // Signal Farcaster SDK ready immediately when connection is attempted
-      if (window.farcaster?.sdk?.ready) {
+      if (typeof window !== 'undefined' && window.farcaster?.sdk?.ready) {
         console.log('Calling Farcaster SDK ready...');
         window.farcaster.sdk.ready();
       }
+
+      // Check if we're in a Farcaster environment
+      const isFarcasterEnv = typeof window !== 'undefined' && 
+        (window.farcaster || window.parent !== window);
+      
+      console.log('Environment check:', {
+        isFarcasterEnv,
+        hasFarcasterObject: !!window.farcaster,
+        isInFrame: window.parent !== window,
+        userAgent: navigator.userAgent
+      });
 
       // Try Farcaster MiniApp connector first
       const farcasterConnector = connectors.find(c => c.id === 'farcasterMiniApp');
       const injectedConnector = connectors.find(c => c.id === 'injected');
       
       console.log('Available connectors:', connectors.map(c => c.id));
-      console.log('Farcaster environment detected:', !!window.farcaster);
+      console.log('Farcaster connector available:', !!farcasterConnector);
       
-      if (farcasterConnector) {
+      // Prioritize Farcaster connector in Farcaster environments
+      if (farcasterConnector && isFarcasterEnv) {
         try {
           console.log('Attempting Farcaster connection...');
           await connect({ connector: farcasterConnector });
@@ -65,29 +77,44 @@ export const useWallet = () => {
           return;
         } catch (farcasterError) {
           console.log('Farcaster connection failed, trying injected wallet:', farcasterError);
+          // Don't throw here, fall through to injected wallet
         }
       }
       
       // Fallback to injected wallet (MetaMask, etc.)
       if (injectedConnector) {
         console.log('Attempting injected wallet connection...');
-        await connect({ connector: injectedConnector });
-      } else {
+        try {
+          await connect({ connector: injectedConnector });
+          console.log('Injected wallet connection successful!');
+        } catch (injectedError) {
+          console.error('Injected wallet connection failed:', injectedError);
+          throw injectedError;
+        }
+      } else if (!farcasterConnector) {
         throw new Error('No wallet connector available');
+      } else {
+        // If we have farcaster connector but it failed and no injected, try farcaster again
+        console.log('Retrying Farcaster connection as last resort...');
+        await connect({ connector: farcasterConnector });
       }
       
       // Check if we're on the correct network (Arbitrum)
       if (chainId && chainId !== arbitrum.id) {
+        console.log(`Wrong network detected. Current: ${chainId}, Expected: ${arbitrum.id}`);
         // Request network switch
-        if (window.ethereum) {
+        if (typeof window !== 'undefined' && window.ethereum) {
           try {
+            console.log('Requesting network switch to Arbitrum...');
             await window.ethereum.request({
               method: 'wallet_switchEthereumChain',
               params: [{ chainId: `0x${arbitrum.id.toString(16)}` }],
             });
+            console.log('Network switch successful');
           } catch (switchError: any) {
             // If the chain hasn't been added to the wallet, add it
             if (switchError.code === 4902) {
+              console.log('Adding Arbitrum network to wallet...');
               await window.ethereum.request({
                 method: 'wallet_addEthereumChain',
                 params: [{
@@ -98,6 +125,10 @@ export const useWallet = () => {
                   blockExplorerUrls: ['https://arbiscan.io/'],
                 }],
               });
+              console.log('Arbitrum network added successfully');
+            } else {
+              console.error('Network switch failed:', switchError);
+              throw switchError;
             }
           }
         }

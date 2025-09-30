@@ -29,21 +29,31 @@ const HomeScreen: React.FC<HomeScreenProps> = ({
 }) => {
   const handleConnectAndAuth = async () => {
     try {
+      console.log('Starting wallet connection and authentication...');
       if (!isConnected) {
+        console.log('Wallet not connected, attempting connection...');
         await onConnectWallet();
         // Wait a moment for wallet connection to complete
         setTimeout(async () => {
           try {
+            console.log('Attempting authentication after wallet connection...');
             await onAuthenticate();
+            console.log('Authentication successful!');
           } catch (error) {
             console.error('Authentication failed:', error);
+            // Show user-friendly error message
+            alert('Authentication failed. Please try again.');
           }
         }, 1000);
       } else {
+        console.log('Wallet already connected, attempting authentication...');
         await onAuthenticate();
+        console.log('Authentication successful!');
       }
     } catch (error) {
       console.error('Connection/Authentication failed:', error);
+      // Show user-friendly error message
+      alert('Failed to connect wallet. Please try again.');
     }
   };
 

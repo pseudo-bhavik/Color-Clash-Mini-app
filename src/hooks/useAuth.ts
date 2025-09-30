@@ -127,6 +127,11 @@ export const useAuth = () => {
     try {
       setLoading(true);
 
+      // Create a valid email format for Supabase
+      // Remove 0x prefix and ensure valid email format
+      const cleanAddress = walletAddress.toLowerCase().replace('0x', '');
+      const email = `wallet_${cleanAddress}@colorclash.app`;
+
       // Create a message to sign for authentication
       const message = `Sign this message to authenticate with Color Clash.\n\nWallet: ${walletAddress}\nTimestamp: ${Date.now()}`;
       
@@ -139,14 +144,14 @@ export const useAuth = () => {
 
       // Authenticate with Supabase using the signed message
       const { data, error } = await supabase.auth.signInWithPassword({
-        email: `${walletAddress.toLowerCase()}@colorclash.app`,
+        email: email,
         password: hashedPassword
       });
 
       if (error && error.message.includes('Invalid login credentials')) {
         // User doesn't exist, create account
         const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-          email: `${walletAddress.toLowerCase()}@colorclash.app`,
+          email: email,
           password: hashedPassword,
           options: {
             data: {
@@ -158,6 +163,7 @@ export const useAuth = () => {
         });
 
         if (signUpError) {
+          console.error('Sign up error:', signUpError);
           throw signUpError;
         }
 
@@ -182,6 +188,7 @@ export const useAuth = () => {
 
         return signUpData;
       } else if (error) {
+        console.error('Sign in error:', error);
         throw error;
       }
 

@@ -56,7 +56,7 @@ const RouletteScreen: React.FC<RouletteScreenProps> = ({
 
   const handleClaimReward = async (rewardAmount: number) => {
     if (!walletAddress || !signer) {
-      showToast.error('Wallet not connected');
+      showToast.error('Please connect and authenticate your wallet first');
       return;
     }
 
@@ -144,6 +144,9 @@ const RouletteScreen: React.FC<RouletteScreenProps> = ({
       onResult(winningReward);
     }, 4000);
   };
+
+  const canSpin = rouletteKeys > 0 && !isSpinning;
+  const needsWallet = !walletAddress;
 
   const segmentAngle = 360 / ROULETTE_REWARDS.length;
 
@@ -289,7 +292,7 @@ const RouletteScreen: React.FC<RouletteScreenProps> = ({
       {/* Spin Button */}
       <button
         onClick={handleSpin}
-        disabled={rouletteKeys === 0 || isSpinning}
+        disabled={!canSpin}
         className="bg-gradient-to-b from-yellow-400 to-yellow-600 text-[#333333] text-xl 
                    font-black py-4 px-12 rounded-2xl border-4 border-[#333333] 
                    shadow-lg hover:from-yellow-300 hover:to-yellow-500
@@ -301,7 +304,13 @@ const RouletteScreen: React.FC<RouletteScreenProps> = ({
         <span>{isSpinning ? 'SPINNING...' : 'SPIN (1 Key 🔑)'}</span>
       </button>
 
-      {rouletteKeys === 0 && (
+      {needsWallet && (
+        <p className="text-[#333333] text-center mt-4 opacity-70">
+          Connect your wallet to claim token rewards!
+        </p>
+      )}
+      
+      {!needsWallet && rouletteKeys === 0 && (
         <p className="text-[#333333] text-center mt-4 opacity-70">
           Win games to earn keys for spinning!
         </p>

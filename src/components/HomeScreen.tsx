@@ -1,24 +1,52 @@
 import React from 'react';
-import { Play, RotateCcw, Trophy } from 'lucide-react';
+import { Play, RotateCcw, Trophy, Wallet, Shield } from 'lucide-react';
 import { GAME_SETTINGS } from '../config/gameConfig';
 
 interface HomeScreenProps {
   rouletteKeys: number;
   dailyGames: number;
   canPlayToday: boolean;
+  isConnected: boolean;
+  isAuthenticated: boolean;
   onStartGame: () => void;
   onSpinRoulette: () => void;
   onShowLeaderboard: () => void;
+  onConnectWallet: () => void;
+  onAuthenticate: () => void;
 }
 
 const HomeScreen: React.FC<HomeScreenProps> = ({ 
   rouletteKeys, 
   dailyGames, 
   canPlayToday, 
+  isConnected,
+  isAuthenticated,
   onStartGame, 
   onSpinRoulette, 
-  onShowLeaderboard 
+  onShowLeaderboard,
+  onConnectWallet,
+  onAuthenticate
 }) => {
+  const handleConnectAndAuth = async () => {
+    try {
+      if (!isConnected) {
+        await onConnectWallet();
+        // Wait a moment for wallet connection to complete
+        setTimeout(async () => {
+          try {
+            await onAuthenticate();
+          } catch (error) {
+            console.error('Authentication failed:', error);
+          }
+        }, 1000);
+      } else {
+        await onAuthenticate();
+      }
+    } catch (error) {
+      console.error('Connection/Authentication failed:', error);
+    }
+  };
+
   return (
     <div className="h-screen flex flex-col items-center justify-center p-6 relative">
       {/* Background Pattern */}
@@ -58,9 +86,31 @@ const HomeScreen: React.FC<HomeScreenProps> = ({
 
       {/* Action Buttons */}
       <div className="space-y-4 w-full max-w-sm z-10">
+        {!isAuthenticated && (
+          <button
+            onClick={handleConnectAndAuth}
+            className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white text-2xl py-4 px-8 rounded-2xl 
+                       border-4 border-[#333333] shadow-lg hover:from-blue-700 hover:to-blue-800
+                       active:transform active:scale-95 transition-all duration-200
+                       flex items-center justify-center space-x-3"
+          >
+            {!isConnected ? (
+              <>
+                <Wallet size={32} />
+                <span>CONNECT WALLET</span>
+              </>
+            ) : (
+              <>
+                <Shield size={32} />
+                <span>AUTHENTICATE</span>
+              </>
+            )}
+          </button>
+        )}
+
         <button
           onClick={onStartGame}
-          disabled={!canPlayToday}
+          disabled={!canPlayToday || !isAuthenticated}
           className="w-full bg-[#E86A5D] text-white text-2xl py-4 px-8 rounded-2xl 
                      border-4 border-[#333333] shadow-lg hover:bg-[#d85a4c] 
                      active:transform active:scale-95 transition-all duration-200
@@ -96,13 +146,18 @@ const HomeScreen: React.FC<HomeScreenProps> = ({
         </button>
       </div>
 
+      {!isAuthenticated && (
+        <p className="text-[#333333] text-sm mt-4 text-center opacity-70 z-10">
+          Connect your wallet to start playing and earning rewards!
+        </p>
+      )}
       {!canPlayToday && (
         <p className="text-[#333333] text-sm mt-4 text-center opacity-70 z-10">
           Daily limit reached! Come back tomorrow for more games.
         </p>
       )}
       
-      {canPlayToday && rouletteKeys === 0 && (
+      {isAuthenticated && canPlayToday && rouletteKeys === 0 && (
         <p className="text-[#333333] text-sm mt-4 text-center opacity-70 z-10">
           Win or draw a game to earn Roulette Keys!
         </p>

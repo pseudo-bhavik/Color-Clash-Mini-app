@@ -41,25 +41,6 @@ export const useWallet = () => {
     updateProviderAndSigner();
   }, [walletClient, isConnected]);
 
-  // Auto-authenticate when wallet connects and we have a signer
-  useEffect(() => {
-    const autoAuthenticate = async () => {
-      if (isConnected && address && signer && !isAuthAuthenticated) {
-        try {
-          // Try to get Farcaster context if available
-          const farcasterFid = (window as any).farcaster?.user?.fid;
-          const username = (window as any).farcaster?.user?.username;
-          
-          await authenticateWithWallet(address, signer, farcasterFid, username);
-        } catch (error) {
-          console.error('Auto-authentication failed:', error);
-          // Don't throw - let user continue without auth if needed
-        }
-      }
-    };
-
-    autoAuthenticate();
-  }, [isConnected, address, signer, isAuthAuthenticated, authenticateWithWallet]);
 
   const connectWallet = async () => {
     try {
@@ -127,6 +108,22 @@ export const useWallet = () => {
     }
   };
 
+  const authenticateUser = async () => {
+    if (!isConnected || !address || !signer) {
+      throw new Error('Wallet not connected');
+    }
+
+    try {
+      // Try to get Farcaster context if available
+      const farcasterFid = (window as any).farcaster?.user?.fid;
+      const username = (window as any).farcaster?.user?.username;
+      
+      await authenticateWithWallet(address, signer, farcasterFid, username);
+    } catch (error) {
+      console.error('Authentication failed:', error);
+      throw error;
+    }
+  };
   const disconnectWallet = () => {
     disconnect();
   };
@@ -138,6 +135,7 @@ export const useWallet = () => {
     provider,
     signer,
     connectWallet,
+    authenticateUser,
     disconnectWallet,
     chainId
   };

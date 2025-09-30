@@ -44,7 +44,12 @@ const RewardClaimedModal: React.FC<RewardClaimedModalProps> = ({
   };
 
   const handleClaim = async () => {
-    if (!walletAddress || !signer || reward.type !== 'onChainToken') {
+    if (reward.type !== 'onChainToken') {
+      return;
+    }
+
+    if (!walletAddress || !signer) {
+      alert('Please connect and authenticate your wallet first');
       return;
     }
 

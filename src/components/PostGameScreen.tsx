@@ -59,8 +59,13 @@ const PostGameScreen: React.FC<PostGameScreenProps> = ({
   const earnedToken = result.playerScore >= result.botScore;
 
   const handleRecordScore = async () => {
-    if (!isWalletConnected || !walletAddress || !signer) {
-      onConnectWallet();
+    if (!isWalletConnected) {
+      showToast.error('Please connect your wallet first');
+      return;
+    }
+
+    if (!walletAddress || !signer) {
+      showToast.error('Wallet connection error. Please try reconnecting.');
       return;
     }
 
@@ -195,7 +200,7 @@ const PostGameScreen: React.FC<PostGameScreenProps> = ({
                        flex items-center justify-center space-x-2"
           >
             <Link size={24} />
-            <span>CONNECT WALLET</span>
+            <span>CONNECT WALLET TO RECORD SCORE</span>
           </button>
         )}
 

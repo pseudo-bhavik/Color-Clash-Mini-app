@@ -42,7 +42,7 @@ function AppContent() {
   const [gameResult, setGameResult] = useState<GameResult | null>(null);
   const [claimedReward, setClaimedReward] = useState<RouletteReward | null>(null);
   const { rouletteKeys, addRouletteKeys, spendRouletteKeys, dailyGames, canPlayToday, incrementDailyGames } = useRouletteKeys();
-  const { connectWallet, isConnected, isAuthenticated, walletAddress, signer } = useWallet();
+  const { connectWallet, authenticateUser, isConnected, isAuthenticated, walletAddress, signer } = useWallet();
   const { user, updateUserStats } = useAuth();
   const { leaderboard, updateLeaderboard } = useLeaderboard();
   const { toasts, removeToast, success, error, info, warning } = useToast();
@@ -67,7 +67,7 @@ function AppContent() {
   }, []);
 
   const handleStartGame = () => {
-    if (!canPlayToday) return;
+    if (!canPlayToday || !isAuthenticated) return;
     setGameState('playing');
   };
 
@@ -138,9 +138,13 @@ function AppContent() {
               rouletteKeys={rouletteKeys}
               dailyGames={dailyGames}
               canPlayToday={canPlayToday}
+              isConnected={isConnected}
+              isAuthenticated={isAuthenticated}
               onStartGame={handleStartGame}
               onSpinRoulette={handleSpinRoulette}
               onShowLeaderboard={handleShowLeaderboard}
+              onConnectWallet={connectWallet}
+              onAuthenticate={authenticateUser}
             />
           )}
           

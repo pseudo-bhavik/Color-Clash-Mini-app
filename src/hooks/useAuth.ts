@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase, UserProfile, AuthSession } from '../lib/supabase';
-import { ethers } from 'ethers';
+import { ethers, sha256, toUtf8Bytes } from 'ethers';
 
 export const useAuth = () => {
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -94,17 +94,21 @@ export const useAuth = () => {
       // Sign the message
       const signature = await signer.signMessage(message);
 
+      // Hash the signature to ensure it fits within Supabase's 72-character password limit
+      // Ethereum signatures are 130+ characters, but SHA256 hash is always 64 characters (+ 0x prefix = 66 total)
+      const hashedPassword = sha256(toUtf8Bytes(signature));
+
       // Authenticate with Supabase using the signed message
       const { data, error } = await supabase.auth.signInWithPassword({
         email: `${walletAddress.toLowerCase()}@colorclash.app`,
-        password: signature
+        password: hashedPassword
       });
 
       if (error && error.message.includes('Invalid login credentials')) {
         // User doesn't exist, create account
         const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
           email: `${walletAddress.toLowerCase()}@colorclash.app`,
-          password: signature,
+          password: hashedPassword,
           options: {
             data: {
               wallet_address: walletAddress.toLowerCase(),

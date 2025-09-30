@@ -75,7 +75,9 @@ export const BOT_DIFFICULTY_PRESETS = {
 export const CONTRACT_ABIS = {
   REWARD_DISTRIBUTOR: [
     "function distributeReward(address recipient, string memory playerName, uint256 amount) external",
+    "function claimRewardWithSignature(address recipient, uint256 amount, uint256 nonce, bytes memory signature) external",
     "function getContractBalance() external view returns (uint256)",
+    "function isNonceUsed(address recipient, uint256 amount, uint256 nonce) external view returns (bool)",
     "event RewardDistributed(address indexed recipient, string playerName, uint256 amount)"
   ],
   SCORE_RECORDER: [

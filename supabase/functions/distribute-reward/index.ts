@@ -7,12 +7,6 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
 };
 
-const REWARD_DISTRIBUTOR_ABI = [
-  "function distributeReward(address recipient, string memory playerName, uint256 amount) external",
-  "function getContractBalance() external view returns (uint256)",
-  "event RewardDistributed(address indexed recipient, string playerName, uint256 amount)"
-];
-
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, {
@@ -22,13 +16,13 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const { walletAddress, rewardAmount, contractAddress, playerName } = await req.json();
+    const { walletAddress, rewardAmount, playerName } = await req.json();
 
-    if (!walletAddress || !rewardAmount || !contractAddress) {
+    if (!walletAddress || !rewardAmount) {
       return new Response(
         JSON.stringify({
           success: false,
-          error: "Missing required fields: walletAddress, rewardAmount, contractAddress"
+          error: "Missing required fields: walletAddress, rewardAmount"
         }),
         {
           status: 400,
@@ -64,7 +58,6 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const rpcUrl = Deno.env.get("ARBITRUM_RPC_URL") || "https://arb1.arbitrum.io/rpc";
     const adminPrivateKey = Deno.env.get("ADMIN_PRIVATE_KEY");
 
     if (!adminPrivateKey) {
@@ -80,47 +73,28 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // Initialize provider and wallet
-    const provider = new ethers.JsonRpcProvider(rpcUrl);
-    const wallet = new ethers.Wallet(adminPrivateKey, provider);
-    const contract = new ethers.Contract(contractAddress, REWARD_DISTRIBUTOR_ABI, wallet);
+    // Generate a unique nonce (timestamp + random number)
+    const nonce = Date.now() * 1000 + Math.floor(Math.random() * 1000);
 
-    // Check contract balance before attempting distribution
-    const contractBalance = await contract.getContractBalance();
-    if (contractBalance < BigInt(rewardAmount)) {
-      return new Response(
-        JSON.stringify({
-          success: false,
-          error: "Insufficient contract balance",
-          details: `Contract balance: ${contractBalance.toString()}, Required: ${rewardAmount}`
-        }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      );
-    }
+    // Create the message hash that will be signed
+    const messageHash = ethers.solidityPackedKeccak256(
+      ["address", "uint256", "uint256"],
+      [walletAddress, rewardAmount, nonce]
+    );
 
-    // Use wallet address as player name if not provided
-    const finalPlayerName = playerName || walletAddress.slice(0, 8);
-
-    // Execute the reward distribution
-    const tx = await contract.distributeReward(walletAddress, finalPlayerName, rewardAmount);
-    const receipt = await tx.wait();
-
-    // Get updated contract balance
-    const updatedBalance = await contract.getContractBalance();
+    // Sign the message hash
+    const wallet = new ethers.Wallet(adminPrivateKey);
+    const signature = await wallet.signMessage(ethers.getBytes(messageHash));
 
     return new Response(
       JSON.stringify({
         success: true,
-        transactionHash: receipt.hash,
-        blockNumber: receipt.blockNumber,
-        gasUsed: receipt.gasUsed.toString(),
         walletAddress,
-        playerName: finalPlayerName,
+        playerName: playerName || walletAddress.slice(0, 8),
         rewardAmount: rewardAmount.toString(),
-        contractBalance: updatedBalance.toString()
+        nonce: nonce.toString(),
+        signature,
+        messageHash
       }),
       {
         status: 200,
@@ -129,31 +103,16 @@ Deno.serve(async (req: Request) => {
     );
 
   } catch (error) {
-    console.error("Error distributing reward:", error);
-
-    // Handle specific error types
-    let errorMessage = "Failed to distribute reward";
-    let statusCode = 500;
-
-    if (error.message?.includes("insufficient funds")) {
-      errorMessage = "Insufficient funds for gas fees";
-      statusCode = 400;
-    } else if (error.message?.includes("execution reverted")) {
-      errorMessage = "Transaction reverted - check contract conditions";
-      statusCode = 400;
-    } else if (error.message?.includes("nonce")) {
-      errorMessage = "Transaction nonce error - please retry";
-      statusCode = 429;
-    }
+    console.error("Error generating claim signature:", error);
 
     return new Response(
       JSON.stringify({
         success: false,
-        error: errorMessage,
+        error: "Failed to generate claim signature",
         details: error.message || error.toString()
       }),
       {
-        status: statusCode,
+        status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       }
     );

@@ -4,6 +4,7 @@ pragma solidity ^0.8.19;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
 /**
  * @title RewardDistributor
@@ -11,14 +12,22 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
  * 
  * Features:
  * - Distributes rewards from existing $CC token contract
- * - Owner-only reward distribution
+ * - Owner-only reward distribution (for admin purposes)
+ * - User-paid gas fees with signature-based claiming
+ * - Nonce-based replay attack prevention
  * - Emergency withdrawal functionality
  * - Token address update capability
  */
 contract RewardDistributor is Ownable, ReentrancyGuard {
+    using ECDSA for bytes32;
+    
     IERC20 public ccToken;
     
+    // Mapping to track used nonces to prevent replay attacks
+    mapping(bytes32 => bool) public usedNonces;
+    
     event RewardDistributed(address indexed recipient, string playerName, uint256 amount);
+    event RewardClaimed(address indexed recipient, uint256 amount, uint256 nonce);
     event TokenAddressUpdated(address indexed oldToken, address indexed newToken);
     event EmergencyWithdrawal(address indexed owner, uint256 amount);
 
@@ -28,7 +37,45 @@ contract RewardDistributor is Ownable, ReentrancyGuard {
     }
 
     /**
-     * @dev Distributes $CC tokens to a recipient
+     * @dev Allows users to claim rewards with a signature from the contract owner
+     * @param recipient Address to receive the tokens
+     * @param amount Amount of tokens to claim
+     * @param nonce Unique nonce to prevent replay attacks
+     * @param signature Signature from the contract owner authorizing this claim
+     */
+    function claimRewardWithSignature(
+        address recipient,
+        uint256 amount,
+        uint256 nonce,
+        bytes memory signature
+    ) external nonReentrant {
+        require(recipient != address(0), "Invalid recipient address");
+        require(amount > 0, "Amount must be greater than 0");
+        require(ccToken.balanceOf(address(this)) >= amount, "Insufficient contract balance");
+
+        // Create the message hash that should have been signed
+        bytes32 messageHash = keccak256(abi.encodePacked(recipient, amount, nonce));
+        
+        // Check if this nonce has already been used
+        require(!usedNonces[messageHash], "Nonce already used");
+        
+        // Verify the signature
+        bytes32 ethSignedMessageHash = messageHash.toEthSignedMessageHash();
+        address signer = ethSignedMessageHash.recover(signature);
+        require(signer == owner(), "Invalid signature");
+        
+        // Mark nonce as used
+        usedNonces[messageHash] = true;
+        
+        // Transfer tokens
+        bool success = ccToken.transfer(recipient, amount);
+        require(success, "Token transfer failed");
+
+        emit RewardClaimed(recipient, amount, nonce);
+    }
+
+    /**
+     * @dev Distributes $CC tokens to a recipient (admin only)
      * @param recipient Address to receive the tokens
      * @param playerName The player's display name
      * @param amount Amount of tokens to distribute
@@ -85,5 +132,16 @@ contract RewardDistributor is Ownable, ReentrancyGuard {
      */
     function getTokenAddress() external view returns (address) {
         return address(ccToken);
+    }
+    
+    /**
+     * @dev Check if a nonce has been used
+     * @param recipient The recipient address
+     * @param amount The amount
+     * @param nonce The nonce to check
+     */
+    function isNonceUsed(address recipient, uint256 amount, uint256 nonce) external view returns (bool) {
+        bytes32 messageHash = keccak256(abi.encodePacked(recipient, amount, nonce));
+        return usedNonces[messageHash];
     }
 }

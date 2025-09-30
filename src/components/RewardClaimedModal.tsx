@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { X, Share2, Coins } from 'lucide-react';
 import { useModeration } from '../hooks/useModeration';
-import { distributeReward } from '../services/blockchainService';
+import { getClaimSignature, claimRewardOnChain } from '../services/blockchainService';
 import { CONTRACT_ADDRESSES } from '../config/gameConfig';
+import { useWallet } from '../hooks/useWallet';
 
 interface RewardClaimedModalProps {
   reward: {amount: number; label: string; type: string};
@@ -18,6 +19,7 @@ const RewardClaimedModal: React.FC<RewardClaimedModalProps> = ({
   const { moderateContent } = useModeration();
   const [isClaiming, setIsClaiming] = useState(false);
   const [claimed, setClaimed] = useState(false);
+  const { signer } = useWallet();
 
   const handleShareOnFarcaster = async () => {
     const text = `I just won ${reward.amount} $CC playing Color Clash! 🎨 Try it out and win big! #ColorClash #Web3Gaming`;
@@ -42,26 +44,41 @@ const RewardClaimedModal: React.FC<RewardClaimedModalProps> = ({
   };
 
   const handleClaim = async () => {
-    if (!walletAddress || reward.type !== 'onChainToken') {
+    if (!walletAddress || !signer || reward.type !== 'onChainToken') {
       return;
     }
 
     setIsClaiming(true);
     try {
-      const playerName = walletAddress.slice(0, 8); // Simple fallback name
-      const response = await distributeReward({
+      const playerName = walletAddress.slice(0, 8);
+      
+      // Get signature from backend
+      const signatureResponse = await getClaimSignature({
         walletAddress,
         rewardAmount: reward.amount,
-        contractAddress: CONTRACT_ADDRESSES.REWARD_DISTRIBUTOR,
         playerName
       });
 
-      if (response.success) {
+      if (!signatureResponse.success) {
+        throw new Error(signatureResponse.error || 'Failed to get claim authorization');
+      }
+
+      // Claim on-chain with user's wallet
+      const claimResponse = await claimRewardOnChain({
+        signer,
+        recipient: walletAddress,
+        amount: reward.amount,
+        nonce: signatureResponse.nonce!,
+        signature: signatureResponse.signature!,
+        contractAddress: CONTRACT_ADDRESSES.REWARD_DISTRIBUTOR
+      });
+
+      if (claimResponse.success) {
         setClaimed(true);
-        alert(`Successfully claimed ${reward.amount} $CC tokens!\nTransaction: ${response.transactionHash}`);
+        alert(`Successfully claimed ${reward.amount} $CC tokens!\nTransaction: ${claimResponse.transactionHash}`);
         setTimeout(() => onClose(), 2000);
       } else {
-        alert(`Failed to claim reward: ${response.error}`);
+        alert(`Failed to claim reward: ${claimResponse.error}`);
       }
     } catch (error) {
       console.error('Failed to claim reward:', error);

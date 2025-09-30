@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { ArrowLeft, RotateCcw, Coins } from 'lucide-react';
 import { ROULETTE_REWARDS, CONTRACT_ADDRESSES, CONTRACT_ABIS } from '../config/gameConfig';
 import { RouletteReward } from '../types/game';
-import { distributeReward } from '../services/blockchainService';
+import { getClaimSignature, claimRewardOnChain } from '../services/blockchainService';
+import { useWallet } from '../hooks/useWallet';
 
 interface ToastFunctions {
   success: (message: string) => void;
@@ -37,6 +38,7 @@ const RouletteScreen: React.FC<RouletteScreenProps> = ({
   const [isSpinning, setIsSpinning] = useState(false);
   const [rotation, setRotation] = useState(0);
   const [lastWin, setLastWin] = useState<RouletteReward | null>(null);
+  const { signer } = useWallet();
 
   const getRandomReward = (): RouletteReward => {
     const random = Math.random();
@@ -53,36 +55,56 @@ const RouletteScreen: React.FC<RouletteScreenProps> = ({
   };
 
   const handleClaimReward = async (rewardAmount: number) => {
-    if (!walletAddress) {
+    if (!walletAddress || !signer) {
       showToast.error('Wallet not connected');
       return;
     }
 
     try {
       const playerName = username || walletAddress.slice(0, 8);
-      showToast.info('Preparing to claim your reward...');
+      showToast.info('Getting claim authorization...');
 
-      const response = await distributeReward({
+      // First, get the signature from the backend
+      const signatureResponse = await getClaimSignature({
         walletAddress,
         rewardAmount,
-        contractAddress: CONTRACT_ADDRESSES.REWARD_DISTRIBUTOR,
         playerName
       });
 
-      if (response.success) {
+      if (!signatureResponse.success) {
+        throw new Error(signatureResponse.error || 'Failed to get claim authorization');
+      }
+
+      showToast.info('Please confirm the transaction in your wallet...');
+
+      // Then, claim the reward on-chain with user's wallet
+      const claimResponse = await claimRewardOnChain({
+        signer,
+        recipient: walletAddress,
+        amount: rewardAmount,
+        nonce: signatureResponse.nonce!,
+        signature: signatureResponse.signature!,
+        contractAddress: CONTRACT_ADDRESSES.REWARD_DISTRIBUTOR
+      });
+
+      if (claimResponse.success) {
         showToast.success(`Successfully claimed ${rewardAmount} $CC tokens!`);
-        console.log('Reward claimed:', response);
+        console.log('Reward claimed:', claimResponse);
       } else {
-        throw new Error(response.error || 'Failed to claim reward');
+        throw new Error(claimResponse.error || 'Failed to claim reward');
       }
     } catch (error) {
       console.error('Failed to claim reward:', error);
       const errorMessage = (error as Error).message;
 
-      if (errorMessage.includes('Insufficient contract balance')) {
+      if (errorMessage.includes('user rejected')) {
+        showToast.warning('Transaction was cancelled by user.');
+      } else if (errorMessage.includes('insufficient funds')) {
+        showToast.error('Insufficient funds for gas fees.');
+      } else if (errorMessage.includes('Insufficient contract balance') || errorMessage.includes('Insufficient tokens in reward pool')) {
         showToast.error('Not enough tokens in the reward pool. Please try again later.');
-      } else if (errorMessage.includes('Server configuration error')) {
-        showToast.error('Service temporarily unavailable. Please try again later.');
+      } else if (errorMessage.includes('already been claimed')) {
+        showToast.error('This reward has already been claimed.');
       } else {
         showToast.error(`Failed to claim reward: ${errorMessage}`);
       }

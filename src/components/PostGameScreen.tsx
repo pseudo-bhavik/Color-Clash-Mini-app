@@ -3,6 +3,7 @@ import { Play, RotateCcw, Home, Link } from 'lucide-react';
 import { GameResult } from '../types/game';
 import { CONTRACT_ADDRESSES } from '../config/gameConfig';
 import { recordScoreOnChain } from '../services/blockchainService';
+import { useWallet } from '../hooks/useWallet';
 
 interface ToastFunctions {
   success: (message: string) => void;
@@ -37,6 +38,8 @@ const PostGameScreen: React.FC<PostGameScreenProps> = ({
   showToast,
 }) => {
   const [isRecording, setIsRecording] = useState(false);
+  const { signer } = useWallet();
+
   const getResultText = () => {
     switch (result.winner) {
       case 'player': return 'YOU WIN!';
@@ -56,7 +59,7 @@ const PostGameScreen: React.FC<PostGameScreenProps> = ({
   const earnedToken = result.playerScore >= result.botScore;
 
   const handleRecordScore = async () => {
-    if (!isWalletConnected || !walletAddress) {
+    if (!isWalletConnected || !walletAddress || !signer) {
       onConnectWallet();
       return;
     }
@@ -67,13 +70,14 @@ const PostGameScreen: React.FC<PostGameScreenProps> = ({
     try {
       const playerName = username || walletAddress.slice(0, 8);
 
-      showToast.info('Recording score on blockchain...');
+      showToast.info('Please confirm the transaction in your wallet...');
       
       const response = await recordScoreOnChain({
         walletAddress,
         score: result.playerScore,
         contractAddress: CONTRACT_ADDRESSES.SCORE_RECORDER,
-        playerName
+        playerName,
+        signer
       });
 
       if (response.success) {
@@ -87,8 +91,10 @@ const PostGameScreen: React.FC<PostGameScreenProps> = ({
       console.error('Failed to record score:', error);
       const errorMessage = (error as Error).message;
 
-      if (errorMessage.includes('Server configuration error')) {
-        showToast.error('Service temporarily unavailable. Please try again later.');
+      if (errorMessage.includes('user rejected')) {
+        showToast.warning('Transaction was cancelled by user.');
+      } else if (errorMessage.includes('insufficient funds')) {
+        showToast.error('Insufficient funds for gas fees.');
       } else {
         showToast.error(`Failed to record score: ${errorMessage}`);
       }

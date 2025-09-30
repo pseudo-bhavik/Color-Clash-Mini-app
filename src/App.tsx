@@ -33,6 +33,12 @@ declare global {
       sdk?: {
         ready: () => void;
       };
+      user?: {
+        fid?: number;
+        username?: string;
+        displayName?: string;
+        pfpUrl?: string;
+      };
     };
   }
 }

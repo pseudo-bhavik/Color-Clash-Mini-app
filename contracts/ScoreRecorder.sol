@@ -4,27 +4,39 @@ pragma solidity ^0.8.19;
 /**
  * @title ScoreRecorder
  * @dev A simple contract for recording player scores on the blockchain
- * 
+ *
  * Features:
  * - Public score recording function
  * - Event emission for easy indexing
  * - Gas-efficient score storage
- * - Player score history tracking
+ * - Player score history tracking (last 10 games only)
+ * - Leaderboard tracking functions
  */
 contract ScoreRecorder {
-    
+
     struct ScoreRecord {
         uint256 score;
         uint256 timestamp;
         uint256 gameNumber;
     }
-    
+
+    struct PlayerStats {
+        uint256 totalGames;
+        uint256 highestScore;
+        uint256 totalScore;
+        uint256 lastGameTimestamp;
+    }
+
+    uint256 public constant MAX_HISTORY_LENGTH = 10;
+
     mapping(address => ScoreRecord[]) public playerScores;
+    mapping(address => PlayerStats) public playerStats;
     mapping(address => uint256) public totalGamesPlayed;
     mapping(address => uint256) public highestScore;
-    
+
     uint256 public totalScoresRecorded;
-    
+    uint256 public uniquePlayers;
+
     event ScoreRecorded(
         address indexed player,
         string playerName,
@@ -45,25 +57,45 @@ contract ScoreRecorder {
         require(bytes(playerName).length > 0, "Player name is required");
 
         address player = msg.sender;
+        bool isNewPlayer = totalGamesPlayed[player] == 0;
         uint256 gameNumber = totalGamesPlayed[player] + 1;
         uint256 timestamp = block.timestamp;
-        
+
         // Create score record
         ScoreRecord memory newRecord = ScoreRecord({
             score: score,
             timestamp: timestamp,
             gameNumber: gameNumber
         });
-        
-        // Store the score
-        playerScores[player].push(newRecord);
+
+        // Keep only last 10 games to save gas
+        if (playerScores[player].length >= MAX_HISTORY_LENGTH) {
+            for (uint256 i = 0; i < playerScores[player].length - 1; i++) {
+                playerScores[player][i] = playerScores[player][i + 1];
+            }
+            playerScores[player][playerScores[player].length - 1] = newRecord;
+        } else {
+            playerScores[player].push(newRecord);
+        }
+
+        // Update player stats
+        PlayerStats storage stats = playerStats[player];
+        stats.totalGames = gameNumber;
+        stats.totalScore += score;
+        stats.lastGameTimestamp = timestamp;
+
         totalGamesPlayed[player] = gameNumber;
         totalScoresRecorded++;
-        
+
+        if (isNewPlayer) {
+            uniquePlayers++;
+        }
+
         // Check for new high score
         if (score > highestScore[player]) {
             uint256 previousHigh = highestScore[player];
             highestScore[player] = score;
+            stats.highestScore = score;
             emit NewHighScore(player, playerName, score, previousHigh);
         }
 
@@ -97,22 +129,16 @@ contract ScoreRecorder {
         uint256 averageScore,
         uint256 lastGameTimestamp
     ) {
-        gamesPlayed = totalGamesPlayed[player];
-        highScore = highestScore[player];
-        
+        PlayerStats memory stats = playerStats[player];
+        gamesPlayed = stats.totalGames;
+        highScore = stats.highestScore;
+        lastGameTimestamp = stats.lastGameTimestamp;
+
         if (gamesPlayed == 0) {
             return (0, 0, 0, 0);
         }
-        
-        // Calculate average score
-        uint256 totalScore = 0;
-        for (uint256 i = 0; i < playerScores[player].length; i++) {
-            totalScore += playerScores[player][i].score;
-        }
-        averageScore = totalScore / gamesPlayed;
-        
-        // Get last game timestamp
-        lastGameTimestamp = playerScores[player][playerScores[player].length - 1].timestamp;
+
+        averageScore = stats.totalScore / gamesPlayed;
     }
     
     /**
@@ -123,8 +149,14 @@ contract ScoreRecorder {
         uint256 totalPlayers
     ) {
         totalScores = totalScoresRecorded;
-        // Note: totalPlayers would require additional tracking to be gas-efficient
-        // For now, this can be calculated off-chain from events
-        totalPlayers = 0;
+        totalPlayers = uniquePlayers;
+    }
+
+    /**
+     * @dev Returns detailed player stats
+     * @param player The player's address
+     */
+    function getDetailedPlayerStats(address player) external view returns (PlayerStats memory) {
+        return playerStats[player];
     }
 }

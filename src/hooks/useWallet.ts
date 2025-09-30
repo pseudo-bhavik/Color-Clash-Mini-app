@@ -4,6 +4,32 @@ import { ethers } from 'ethers';
 import { arbitrum } from '@wagmi/core/chains';
 import { useAuth } from './useAuth';
 
+interface FarcasterUser {
+  fid?: number;
+  username?: string;
+  displayName?: string;
+  pfpUrl?: string;
+}
+
+const getFarcasterContext = (): FarcasterUser | null => {
+  if (typeof window === 'undefined') return null;
+
+  if (window.farcaster?.user) {
+    return window.farcaster.user;
+  }
+
+  try {
+    const frameContext = (window as any).sdk?.context;
+    if (frameContext?.user) {
+      return frameContext.user;
+    }
+  } catch (e) {
+    console.log('Could not access frame context');
+  }
+
+  return null;
+};
+
 export const useWallet = () => {
   const { address, isConnected, chainId } = useAccount();
   const { connect, connectors } = useConnect();
@@ -40,9 +66,15 @@ export const useWallet = () => {
 
   const connectWallet = async () => {
     try {
-      if (typeof window !== 'undefined' && window.farcaster?.sdk?.ready) {
-        console.log('Calling Farcaster SDK ready...');
-        window.farcaster.sdk.ready();
+      if (typeof window !== 'undefined') {
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        if (window.farcaster?.sdk?.ready) {
+          console.log('Calling Farcaster SDK ready...');
+          window.farcaster.sdk.ready();
+
+          await new Promise(resolve => setTimeout(resolve, 300));
+        }
       }
 
       const isFarcasterEnv = typeof window !== 'undefined' &&
@@ -51,6 +83,8 @@ export const useWallet = () => {
       console.log('Environment check:', {
         isFarcasterEnv,
         hasFarcasterObject: !!window.farcaster,
+        hasUserData: !!window.farcaster?.user,
+        userData: window.farcaster?.user,
         isInFrame: window.parent !== window,
         userAgent: navigator.userAgent
       });
@@ -133,12 +167,27 @@ export const useWallet = () => {
     try {
       console.log('Starting authentication process...');
 
-      const farcasterFid = (window as any).farcaster?.user?.fid;
-      const username = (window as any).farcaster?.user?.username;
+      let farcasterFid: string | undefined;
+      let username: string | undefined;
+
+      const fcUser = getFarcasterContext();
+
+      if (fcUser) {
+        farcasterFid = fcUser.fid ? String(fcUser.fid) : undefined;
+        username = fcUser.username || fcUser.displayName || undefined;
+
+        console.log('Farcaster user data detected:', {
+          fid: farcasterFid,
+          username,
+          rawData: fcUser
+        });
+      } else {
+        console.log('No Farcaster context detected. This may be a regular wallet connection.');
+      }
 
       await authenticateWithWallet(address, signer, farcasterFid, username);
 
-      console.log('Authentication completed successfully!');
+      console.log('Authentication completed successfully!', { farcasterFid, username });
     } catch (error) {
       console.error('Authentication failed:', error);
       throw error;

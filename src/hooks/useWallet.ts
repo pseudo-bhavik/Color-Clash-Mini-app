@@ -1,0 +1,132 @@
+import { useState, useEffect } from 'react';
+import { useAccount, useConnect, useDisconnect, usePublicClient, useWalletClient } from 'wagmi';
+import { ethers } from 'ethers';
+import { arbitrum } from '@wagmi/core/chains';
+import { useAuth } from './useAuth';
+
+export const useWallet = () => {
+  const { address, isConnected, chainId } = useAccount();
+  const { connect, connectors } = useConnect();
+  const { disconnect } = useDisconnect();
+  const publicClient = usePublicClient();
+  const { data: walletClient } = useWalletClient();
+  
+  const [provider, setProvider] = useState<ethers.BrowserProvider | null>(null);
+  const [signer, setSigner] = useState<ethers.JsonRpcSigner | null>(null);
+  const { authenticateWithWallet, isAuthenticated: isAuthAuthenticated } = useAuth();
+
+  // Update provider and signer when wallet client changes
+  useEffect(() => {
+    const updateProviderAndSigner = async () => {
+      if (walletClient && isConnected) {
+        try {
+          // Create ethers provider from wagmi client
+          const ethersProvider = new ethers.BrowserProvider(walletClient.transport as any);
+          setProvider(ethersProvider);
+
+          // Get signer
+          const ethSigner = await ethersProvider.getSigner();
+          setSigner(ethSigner);
+        } catch (error) {
+          console.error('Failed to setup provider/signer:', error);
+          setProvider(null);
+          setSigner(null);
+        }
+      } else {
+        setProvider(null);
+        setSigner(null);
+      }
+    };
+
+    updateProviderAndSigner();
+  }, [walletClient, isConnected]);
+
+  // Auto-authenticate when wallet connects and we have a signer
+  useEffect(() => {
+    const autoAuthenticate = async () => {
+      if (isConnected && address && signer && !isAuthAuthenticated) {
+        try {
+          // Try to get Farcaster context if available
+          const farcasterFid = (window as any).farcaster?.user?.fid;
+          const username = (window as any).farcaster?.user?.username;
+          
+          await authenticateWithWallet(address, signer, farcasterFid, username);
+        } catch (error) {
+          console.error('Auto-authentication failed:', error);
+          // Don't throw - let user continue without auth if needed
+        }
+      }
+    };
+
+    autoAuthenticate();
+  }, [isConnected, address, signer, isAuthAuthenticated, authenticateWithWallet]);
+
+  const connectWallet = async () => {
+    try {
+      // Try Farcaster MiniApp connector first
+      const farcasterConnector = connectors.find(c => c.id === 'farcasterMiniApp');
+      const injectedConnector = connectors.find(c => c.id === 'injected');
+      
+      if (farcasterConnector) {
+        try {
+          await connect({ connector: farcasterConnector });
+          return;
+        } catch (farcasterError) {
+          console.log('Farcaster connection failed, trying injected wallet:', farcasterError);
+        }
+      }
+      
+      // Fallback to injected wallet (MetaMask, etc.)
+      if (injectedConnector) {
+        await connect({ connector: injectedConnector });
+      } else {
+        throw new Error('No wallet connector available');
+      }
+      
+      // Check if we're on the correct network (Arbitrum)
+      if (chainId && chainId !== arbitrum.id) {
+        // Request network switch
+        if (window.ethereum) {
+          try {
+            await window.ethereum.request({
+              method: 'wallet_switchEthereumChain',
+              params: [{ chainId: `0x${arbitrum.id.toString(16)}` }],
+            });
+          } catch (switchError: any) {
+            // If the chain hasn't been added to the wallet, add it
+            if (switchError.code === 4902) {
+              await window.ethereum.request({
+                method: 'wallet_addEthereumChain',
+                params: [{
+                  chainId: `0x${arbitrum.id.toString(16)}`,
+                  chainName: arbitrum.name,
+                  nativeCurrency: arbitrum.nativeCurrency,
+                  rpcUrls: ['https://arb1.arbitrum.io/rpc'],
+                  blockExplorerUrls: ['https://arbiscan.io/'],
+                }],
+              });
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Failed to connect wallet:', error);
+      throw error;
+    }
+  };
+
+  const disconnectWallet = () => {
+    disconnect();
+  };
+
+  return {
+    isConnected,
+    isAuthenticated: isAuthAuthenticated,
+    walletAddress: address,
+    provider,
+    signer,
+    connectWallet,
+    disconnectWallet,
+    chainId
+  };
+};

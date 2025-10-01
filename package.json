@@ -11,6 +11,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.app.json"
   },
   "dependencies": {
+    "@farcaster/miniapp-sdk": "^0.1.10",
     "@farcaster/miniapp-wagmi-connector": "^1.0.0",
     "@supabase/supabase-js": "^2.57.4",
     "@tanstack/react-query": "^5.90.2",

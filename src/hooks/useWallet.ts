@@ -4,6 +4,7 @@ import { ethers } from 'ethers';
 import { arbitrum } from '@wagmi/core/chains';
 import { useAuth } from './useAuth';
 import { neynarService } from '../services/neynarService';
+import { getFarcasterContext } from '../lib/farcasterSdk';
 
 interface FarcasterUser {
   fid?: number;
@@ -11,29 +12,6 @@ interface FarcasterUser {
   displayName?: string;
   pfpUrl?: string;
 }
-
-const getFarcasterContext = (): FarcasterUser | null => {
-  if (typeof window === 'undefined') return null;
-
-  try {
-    const sdk = (window as any).sdk;
-    if (sdk?.context?.user) {
-      console.log('Found Farcaster user via sdk.context.user:', sdk.context.user);
-      return sdk.context.user;
-    }
-
-    if (window.farcaster?.user) {
-      console.log('Found Farcaster user via window.farcaster.user:', window.farcaster.user);
-      return window.farcaster.user;
-    }
-
-    console.log('No Farcaster user context found');
-  } catch (e) {
-    console.error('Error accessing Farcaster context:', e);
-  }
-
-  return null;
-};
 
 export const useWallet = () => {
   const { address, isConnected, chainId } = useAccount();
@@ -71,21 +49,6 @@ export const useWallet = () => {
 
   const connectWallet = async () => {
     try {
-      if (typeof window !== 'undefined') {
-        await new Promise(resolve => setTimeout(resolve, 500));
-
-        const sdk = (window as any).sdk;
-        if (sdk?.actions?.ready) {
-          console.log('Calling sdk.actions.ready() before wallet connection...');
-          try {
-            sdk.actions.ready();
-            await new Promise(resolve => setTimeout(resolve, 300));
-          } catch (error) {
-            console.error('Error calling sdk.actions.ready():', error);
-          }
-        }
-      }
-
       const isFarcasterEnv = typeof window !== 'undefined' &&
         ((window as any).sdk || window.farcaster || window.parent !== window);
 
@@ -181,7 +144,7 @@ export const useWallet = () => {
       let farcasterFid: string | undefined;
       let username: string | undefined;
 
-      const fcUser = getFarcasterContext();
+      const fcUser = getFarcasterContext() as FarcasterUser | null;
       console.log('Farcaster context user data:', fcUser);
 
       if (fcUser) {

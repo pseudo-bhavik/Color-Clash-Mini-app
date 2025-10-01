@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { WagmiProvider } from 'wagmi';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { wagmiConfig } from './lib/wagmi';
+import { initializeFarcasterSdk } from './lib/farcasterSdk';
 import HomeScreen from './components/HomeScreen';
 import GameScreen from './components/GameScreen';
 import PostGameScreen from './components/PostGameScreen';
@@ -16,7 +17,7 @@ import { useAuth } from './hooks/useAuth';
 import { useToast } from './hooks/useToast';
 import ToastContainer from './components/ToastContainer';
 
-// Create a client for React Query with proper error handling
+// Create a client for React Query with proper error handling hello
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -63,6 +64,13 @@ function AppContent() {
   const { leaderboard, updateLeaderboard } = useLeaderboard();
   const { toasts, removeToast, success, error, info, warning } = useToast();
 
+  useEffect(() => {
+    const initApp = async () => {
+      await initializeFarcasterSdk();
+    };
+
+    initApp();
+  }, []);
 
 
   const handleAuthenticate = async () => {

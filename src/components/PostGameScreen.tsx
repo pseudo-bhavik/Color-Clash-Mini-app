@@ -163,7 +163,7 @@ const PostGameScreen: React.FC<PostGameScreenProps> = ({
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer" />
             )}
             <Rocket size={24} className={isRecording ? 'animate-pulse' : ''} />
-            <span>{isRecording ? 'IMMORTALIZING...' : 'IMMORTALIZE YOUR SCORE 🚀'}</span>
+            <span>{isRecording ? 'IMMORTALIZING...' : 'IMMORTALIZE YOUR SCORE'}</span>
           </button>
         )}
 
@@ -176,7 +176,7 @@ const PostGameScreen: React.FC<PostGameScreenProps> = ({
                        flex items-center justify-center space-x-2"
           >
             <Rocket size={24} />
-            <span>CONNECT TO IMMORTALIZE hello</span>
+            <span>CONNECT TO IMMORTALIZE</span>
           </button>
         )}
 

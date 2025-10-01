@@ -182,6 +182,7 @@ export const useWallet = () => {
       let username: string | undefined;
 
       const fcUser = getFarcasterContext();
+      console.log('Farcaster context user data:', fcUser);
 
       if (fcUser) {
         farcasterFid = fcUser.fid ? String(fcUser.fid) : undefined;
@@ -195,8 +196,10 @@ export const useWallet = () => {
 
         if (farcasterFid && !username) {
           console.log('Username not available from SDK, attempting Neynar API fallback...');
+          console.log('Using FID for Neynar lookup:', farcasterFid);
           try {
             const neynarData = await neynarService.getUserByFid(Number(farcasterFid));
+            console.log('Neynar API response:', neynarData);
             if (neynarData) {
               username = neynarData.username || neynarData.displayName;
               console.log('Successfully fetched username from Neynar:', username);

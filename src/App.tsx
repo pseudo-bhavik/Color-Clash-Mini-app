@@ -81,6 +81,7 @@ function AppContent() {
         try {
           sdk.actions.ready();
           console.log('SDK ready() called successfully');
+          console.log('Farcaster SDK user context after ready():', sdk.context?.user);
         } catch (error) {
           console.error('Error calling sdk.actions.ready():', error);
         }

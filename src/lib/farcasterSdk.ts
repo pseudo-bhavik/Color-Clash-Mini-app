@@ -34,37 +34,26 @@ export const getFarcasterContext = () => {
   if (typeof window === 'undefined') return null;
 
   try {
-    console.log('Attempting to get Farcaster context...');
-    console.log('SDK object:', sdk);
-    console.log('SDK context:', sdk.context);
+    const windowSdk = (window as any).sdk;
+    let user = null;
 
-    // Try to get user from the SDK
-    const user = sdk.context?.user;
-
-    console.log('Raw user data from SDK:', user);
-    console.log('User properties:', user ? Object.keys(user) : 'null');
-
-    if (!user) {
-      console.log('No user found in SDK context');
-      return null;
+    if (windowSdk?.context?.user) {
+      user = windowSdk.context.user;
+    } else if (window.farcaster?.user) {
+      user = window.farcaster.user;
+    } else if (sdk.context?.user) {
+      user = sdk.context.user;
     }
 
-    // Log each property type and value
-    console.log('fid type:', typeof user.fid, 'value:', user.fid);
-    console.log('username type:', typeof user.username, 'value:', user.username);
-    console.log('displayName type:', typeof user.displayName, 'value:', user.displayName);
+    if (!user) return null;
 
     // Extract only the primitive values we need
-    const extractedData = {
-      fid: user.fid,
-      username: user.username,
-      displayName: user.displayName,
-      pfpUrl: user.pfpUrl,
+    return {
+      fid: typeof user.fid === 'number' ? user.fid : undefined,
+      username: typeof user.username === 'string' ? user.username : undefined,
+      displayName: typeof user.displayName === 'string' ? user.displayName : undefined,
+      pfpUrl: typeof user.pfpUrl === 'string' ? user.pfpUrl : undefined,
     };
-
-    console.log('Extracted user data:', extractedData);
-
-    return extractedData;
   } catch (error) {
     console.error('Error accessing Farcaster context:', error);
     return null;

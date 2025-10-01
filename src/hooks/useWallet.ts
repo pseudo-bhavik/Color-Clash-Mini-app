@@ -146,8 +146,16 @@ export const useWallet = () => {
 
       const fcUser = getFarcasterContext() as FarcasterUser | null;
       console.log('Farcaster context user data:', fcUser);
+      console.log('fcUser type:', typeof fcUser);
+      console.log('fcUser is null?:', fcUser === null);
+      console.log('fcUser keys:', fcUser ? Object.keys(fcUser) : 'null');
 
       if (fcUser) {
+        console.log('Processing Farcaster user data...');
+        console.log('fcUser.fid:', fcUser.fid, 'type:', typeof fcUser.fid);
+        console.log('fcUser.username:', fcUser.username, 'type:', typeof fcUser.username);
+        console.log('fcUser.displayName:', fcUser.displayName, 'type:', typeof fcUser.displayName);
+
         farcasterFid = fcUser.fid ? String(fcUser.fid) : undefined;
         username = fcUser.username || fcUser.displayName || undefined;
 

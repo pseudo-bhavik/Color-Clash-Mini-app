@@ -153,7 +153,7 @@ const PostGameScreen: React.FC<PostGameScreenProps> = ({
           <button
             onClick={handleRecordScore}
             disabled={isRecording}
-            className="w-full bg-gradient-to-r from-green-600 to-green-700 text-white text-xl py-4 px-6 rounded-2xl
+            className="w-full bg-gradient-to-r from-green-600 to-green-700 text-white text-lg py-4 px-6 rounded-2xl
                        border-4 border-[#333333] shadow-xl hover:from-green-700 hover:to-green-800
                        active:transform active:scale-95 transition-all duration-200
                        disabled:opacity-50 disabled:cursor-not-allowed
@@ -170,7 +170,7 @@ const PostGameScreen: React.FC<PostGameScreenProps> = ({
         {(result.winner === 'player' || result.winner === 'draw') && !isWalletConnected && (
           <button
             onClick={onConnectWallet}
-            className="w-full bg-gradient-to-r from-green-600 to-green-700 text-white text-xl py-4 px-6 rounded-2xl
+            className="w-full bg-gradient-to-r from-green-600 to-green-700 text-white text-lg py-4 px-6 rounded-2xl
                        border-4 border-[#333333] shadow-xl hover:from-green-700 hover:to-green-800
                        active:transform active:scale-95 transition-all duration-200
                        flex items-center justify-center space-x-2"

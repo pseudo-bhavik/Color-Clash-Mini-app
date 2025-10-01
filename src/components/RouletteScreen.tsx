@@ -250,12 +250,12 @@ const RouletteScreen: React.FC<RouletteScreenProps> = ({
                   <div
                     className="absolute text-white font-black text-center leading-none"
                     style={{
-                      top: '28%',
+                      top: '20%',
                       left: '50%',
-                      transform: `translateX(-50%) rotate(${segmentAngle / 2}deg)`,
+                      transform: `translateX(-50%) rotate(-${startAngle}deg)`,
                       transformOrigin: 'center',
                       width: 'auto',
-                      fontSize: reward.label.length > 8 ? '10px' : '12px',
+                      fontSize: '14px',
                       textShadow: '1px 1px 3px rgba(0,0,0,0.9), -1px -1px 3px rgba(0,0,0,0.9)'
                     }}
                   >

@@ -64,47 +64,6 @@ function AppContent() {
   const { toasts, removeToast, success, error, info, warning } = useToast();
 
 
-  useEffect(() => {
-    const initializeFarcaster = () => {
-      if (typeof window === 'undefined') return;
-
-      const sdk = (window as any).sdk;
-
-      if (sdk?.actions?.ready) {
-        console.log('Farcaster SDK detected, calling sdk.actions.ready()...');
-        console.log('SDK Context:', {
-          user: sdk.context?.user,
-          location: sdk.context?.location,
-          client: sdk.context?.client
-        });
-
-        try {
-          sdk.actions.ready();
-          console.log('SDK ready() called successfully');
-          console.log('Farcaster SDK user context after ready():', sdk.context?.user);
-        } catch (error) {
-          console.error('Error calling sdk.actions.ready():', error);
-        }
-      } else {
-        console.log('Farcaster SDK not yet available. Checking paths:', {
-          sdkExists: !!sdk,
-          sdkActions: !!sdk?.actions,
-          sdkActionsReady: !!sdk?.actions?.ready,
-          windowFarcaster: !!(window as any).farcaster
-        });
-      }
-    };
-
-    initializeFarcaster();
-
-    const timeout1 = setTimeout(initializeFarcaster, 500);
-    const timeout2 = setTimeout(initializeFarcaster, 1500);
-
-    return () => {
-      clearTimeout(timeout1);
-      clearTimeout(timeout2);
-    };
-  }, []);
 
   const handleAuthenticate = async () => {
     if (!isConnected || isAuthenticating) return;

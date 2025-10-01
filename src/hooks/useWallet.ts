@@ -210,6 +210,7 @@ export const useWallet = () => {
         }
       } else {
         console.log('No Farcaster context detected. This may be a regular wallet connection.');
+        console.warn('Farcaster user context (FID/username) is not available from the SDK. This usually happens when the app is not running inside a Farcaster frame.');
       }
 
       await authenticateWithWallet(address, signer, farcasterFid, username);

@@ -34,86 +34,18 @@ export const getFarcasterContext = () => {
   if (typeof window === 'undefined') return null;
 
   try {
-    console.log('Attempting to get Farcaster context...');
-    console.log('SDK object:', sdk);
-    console.log('SDK context:', sdk.context);
+    const context = sdk.context;
 
-    // Try to get user from the SDK
-    const user = sdk.context?.user;
-
-    console.log('Raw user data from SDK:', user);
-    console.log('User properties:', user ? Object.keys(user) : 'null');
-
-    if (!user) {
-      console.log('No user found in SDK context');
+    if (!context?.user) {
       return null;
     }
 
-    // Log each property type and value
-    console.log('fid type:', typeof user.fid, 'value:', user.fid);
-    console.log('username type:', typeof user.username, 'value:', user.username);
-    console.log('displayName type:', typeof user.displayName, 'value:', user.displayName);
-
-    // These properties are functions/proxies in Farcaster SDK, so we need to call them
-    const getFidValue = () => {
-      try {
-        if (typeof user.fid === 'function') {
-          return user.fid();
-        }
-        return user.fid;
-      } catch (e) {
-        console.error('Error getting fid:', e);
-        return undefined;
-      }
+    return {
+      fid: context.user.fid,
+      username: context.user.username,
+      displayName: context.user.displayName,
+      pfpUrl: context.user.pfpUrl,
     };
-
-    const getUsernameValue = () => {
-      try {
-        if (typeof user.username === 'function') {
-          return user.username();
-        }
-        return user.username;
-      } catch (e) {
-        console.error('Error getting username:', e);
-        return undefined;
-      }
-    };
-
-    const getDisplayNameValue = () => {
-      try {
-        if (typeof user.displayName === 'function') {
-          return user.displayName();
-        }
-        return user.displayName;
-      } catch (e) {
-        console.error('Error getting displayName:', e);
-        return undefined;
-      }
-    };
-
-    const getPfpUrlValue = () => {
-      try {
-        if (typeof user.pfpUrl === 'function') {
-          return user.pfpUrl();
-        }
-        return user.pfpUrl;
-      } catch (e) {
-        console.error('Error getting pfpUrl:', e);
-        return undefined;
-      }
-    };
-
-    // Extract the actual values by calling the functions
-    const extractedData = {
-      fid: getFidValue(),
-      username: getUsernameValue(),
-      displayName: getDisplayNameValue(),
-      pfpUrl: getPfpUrlValue(),
-    };
-
-    console.log('Extracted user data:', extractedData);
-
-    return extractedData;
   } catch (error) {
     console.error('Error accessing Farcaster context:', error);
     return null;

@@ -176,7 +176,7 @@ const PostGameScreen: React.FC<PostGameScreenProps> = ({
                        flex items-center justify-center space-x-2"
           >
             <Rocket size={24} />
-            <span>CONNECT TO IMMORTALIZE 🚀</span>
+            <span>CONNECT TO IMMORTALIZE </span>
           </button>
         )}
 

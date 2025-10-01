@@ -54,12 +54,61 @@ export const getFarcasterContext = () => {
     console.log('username type:', typeof user.username, 'value:', user.username);
     console.log('displayName type:', typeof user.displayName, 'value:', user.displayName);
 
-    // Extract only the primitive values we need
+    // These properties are functions/proxies in Farcaster SDK, so we need to call them
+    const getFidValue = () => {
+      try {
+        if (typeof user.fid === 'function') {
+          return user.fid();
+        }
+        return user.fid;
+      } catch (e) {
+        console.error('Error getting fid:', e);
+        return undefined;
+      }
+    };
+
+    const getUsernameValue = () => {
+      try {
+        if (typeof user.username === 'function') {
+          return user.username();
+        }
+        return user.username;
+      } catch (e) {
+        console.error('Error getting username:', e);
+        return undefined;
+      }
+    };
+
+    const getDisplayNameValue = () => {
+      try {
+        if (typeof user.displayName === 'function') {
+          return user.displayName();
+        }
+        return user.displayName;
+      } catch (e) {
+        console.error('Error getting displayName:', e);
+        return undefined;
+      }
+    };
+
+    const getPfpUrlValue = () => {
+      try {
+        if (typeof user.pfpUrl === 'function') {
+          return user.pfpUrl();
+        }
+        return user.pfpUrl;
+      } catch (e) {
+        console.error('Error getting pfpUrl:', e);
+        return undefined;
+      }
+    };
+
+    // Extract the actual values by calling the functions
     const extractedData = {
-      fid: user.fid,
-      username: user.username,
-      displayName: user.displayName,
-      pfpUrl: user.pfpUrl,
+      fid: getFidValue(),
+      username: getUsernameValue(),
+      displayName: getDisplayNameValue(),
+      pfpUrl: getPfpUrlValue(),
     };
 
     console.log('Extracted user data:', extractedData);

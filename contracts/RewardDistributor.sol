@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 
 /**
  * @title RewardDistributor
@@ -23,6 +24,7 @@ import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
  */
 contract RewardDistributor is Ownable, ReentrancyGuard, Pausable {
     using ECDSA for bytes32;
+    using MessageHashUtils for bytes32;
 
     IERC20 public ccToken;
 
@@ -35,7 +37,7 @@ contract RewardDistributor is Ownable, ReentrancyGuard, Pausable {
     event TokenAddressUpdated(address indexed oldToken, address indexed newToken);
     event EmergencyWithdrawal(address indexed owner, uint256 amount);
 
-    constructor(address _ccTokenAddress) {
+    constructor(address _ccTokenAddress, address initialOwner) Ownable(initialOwner) {
         require(_ccTokenAddress != address(0), "Invalid token address");
         ccToken = IERC20(_ccTokenAddress);
     }
@@ -59,13 +61,13 @@ contract RewardDistributor is Ownable, ReentrancyGuard, Pausable {
 
         // Create the message hash that should have been signed
         bytes32 messageHash = keccak256(abi.encodePacked(recipient, amount, nonce));
-        
+
         // Check if this nonce has already been used
         require(!usedNonces[messageHash], "Nonce already used");
-        
+
         // Verify the signature
-        bytes32 ethSignedMessageHash = messageHash.toEthSignedMessageHash();
-        address signer = ethSignedMessageHash.recover(signature);
+        bytes32 ethSignedMessageHash = MessageHashUtils.toEthSignedMessageHash(messageHash);
+        address signer = ECDSA.recover(ethSignedMessageHash, signature);
         require(signer == owner(), "Invalid signature");
         
         // Mark nonce as used

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Play, RotateCcw, Home, Link } from 'lucide-react';
+import { Play, RotateCcw, Home, Rocket } from 'lucide-react';
 import { GameResult } from '../types/game';
 import { CONTRACT_ADDRESSES } from '../config/gameConfig';
 import { recordScoreOnChain } from '../services/blockchainService';
@@ -149,30 +149,6 @@ const PostGameScreen: React.FC<PostGameScreenProps> = ({
 
       {/* Action Buttons */}
       <div className="space-y-4 w-full max-w-sm">
-        <button
-          onClick={onPlayAgain}
-          disabled={!canPlayToday}
-          className="w-full bg-gradient-to-r from-[#E86A5D] to-[#D75A4C] text-white text-xl py-4 px-6 rounded-2xl 
-                     border-4 border-[#333333] shadow-xl hover:from-[#d85a4c] hover:to-[#c54a3d]
-                     active:transform active:scale-95 transition-all duration-200
-                     disabled:bg-gray-400 disabled:cursor-not-allowed
-                     flex items-center justify-center space-x-2"
-        >
-          <Play size={24} fill="white" />
-          <span>PLAY AGAIN</span>
-        </button>
-
-        <button
-          onClick={onSpinRoulette}
-          className="w-full bg-gradient-to-r from-[#3DB4D8] to-[#2A9BC1] text-white text-xl py-4 px-6 rounded-2xl 
-                     border-4 border-[#333333] shadow-xl hover:from-[#35a5c4] hover:to-[#2590b3]
-                     active:transform active:scale-95 transition-all duration-200
-                     flex items-center justify-center space-x-2"
-        >
-          <RotateCcw size={24} />
-          <span>SPIN ROULETTE</span>
-        </button>
-
         {(result.winner === 'player' || result.winner === 'draw') && isWalletConnected && walletAddress && (
           <button
             onClick={handleRecordScore}
@@ -186,27 +162,51 @@ const PostGameScreen: React.FC<PostGameScreenProps> = ({
             {isRecording && (
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer" />
             )}
-            <Link size={24} className={isRecording ? 'animate-pulse' : ''} />
-            <span>{isRecording ? 'RECORDING ON-CHAIN...' : 'RECORD SCORE ON-CHAIN'}</span>
+            <Rocket size={24} className={isRecording ? 'animate-pulse' : ''} />
+            <span>{isRecording ? 'IMMORTALIZING...' : 'IMMORTALIZE YOUR SCORE 🚀'}</span>
           </button>
         )}
 
         {(result.winner === 'player' || result.winner === 'draw') && !isWalletConnected && (
           <button
             onClick={onConnectWallet}
-            className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white text-xl py-4 px-6 rounded-2xl 
-                       border-4 border-[#333333] shadow-xl hover:from-blue-700 hover:to-blue-800
+            className="w-full bg-gradient-to-r from-green-600 to-green-700 text-white text-xl py-4 px-6 rounded-2xl
+                       border-4 border-[#333333] shadow-xl hover:from-green-700 hover:to-green-800
                        active:transform active:scale-95 transition-all duration-200
                        flex items-center justify-center space-x-2"
           >
-            <Link size={24} />
-            <span>CONNECT WALLET</span>
+            <Rocket size={24} />
+            <span>CONNECT TO IMMORTALIZE 🚀</span>
           </button>
         )}
 
         <button
+          onClick={onPlayAgain}
+          disabled={!canPlayToday}
+          className="w-full bg-gradient-to-r from-[#E86A5D] to-[#D75A4C] text-white text-xl py-4 px-6 rounded-2xl
+                     border-4 border-[#333333] shadow-xl hover:from-[#d85a4c] hover:to-[#c54a3d]
+                     active:transform active:scale-95 transition-all duration-200
+                     disabled:bg-gray-400 disabled:cursor-not-allowed
+                     flex items-center justify-center space-x-2"
+        >
+          <Play size={24} fill="white" />
+          <span>PLAY AGAIN</span>
+        </button>
+
+        <button
+          onClick={onSpinRoulette}
+          className="w-full bg-gradient-to-r from-[#3DB4D8] to-[#2A9BC1] text-white text-xl py-4 px-6 rounded-2xl
+                     border-4 border-[#333333] shadow-xl hover:from-[#35a5c4] hover:to-[#2590b3]
+                     active:transform active:scale-95 transition-all duration-200
+                     flex items-center justify-center space-x-2"
+        >
+          <RotateCcw size={24} />
+          <span>SPIN ROULETTE</span>
+        </button>
+
+        <button
           onClick={onBackToHome}
-          className="w-full bg-gradient-to-r from-white to-gray-100 text-[#333333] text-xl py-4 px-6 rounded-2xl 
+          className="w-full bg-gradient-to-r from-white to-gray-100 text-[#333333] text-xl py-4 px-6 rounded-2xl
                      border-4 border-[#333333] shadow-xl hover:from-gray-100 hover:to-gray-200
                      active:transform active:scale-95 transition-all duration-200
                      flex items-center justify-center space-x-2"

@@ -21,7 +21,7 @@ contract ColorClashToken is ERC20, ERC20Burnable, Ownable {
 
     event TokensMinted(address indexed to, uint256 amount);
 
-    constructor() ERC20("Color Clash Token", "CC") {
+    constructor(address initialOwner) ERC20("Color Clash Token", "CC") Ownable(initialOwner) {
         _mint(msg.sender, INITIAL_SUPPLY);
     }
 

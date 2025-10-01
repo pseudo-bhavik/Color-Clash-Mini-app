@@ -1,5 +1,5 @@
-import React from 'react';
-import { Play, RotateCcw, Trophy, Wallet, Shield } from 'lucide-react';
+import React, { useState } from 'react';
+import { Play, RotateCcw, Trophy, Wallet, Shield, Info, X } from 'lucide-react';
 import { GAME_SETTINGS } from '../config/gameConfig';
 
 interface HomeScreenProps {
@@ -29,6 +29,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({
   onConnectWallet,
   onAuthenticate,
 }) => {
+  const [showInfoModal, setShowInfoModal] = useState(false);
   const handleConnectWallet = async () => {
     try {
       await onConnectWallet();
@@ -54,6 +55,16 @@ const HomeScreen: React.FC<HomeScreenProps> = ({
 
   return (
     <div className="h-screen flex flex-col items-center justify-center p-6 relative">
+      {/* Info Button */}
+      <button
+        onClick={() => setShowInfoModal(true)}
+        className="absolute top-6 right-6 z-20 w-12 h-12 bg-white rounded-full border-3 border-[#333333]
+                   flex items-center justify-center shadow-lg hover:bg-gray-100
+                   active:transform active:scale-95 transition-all duration-200"
+        aria-label="Game Information"
+      >
+        <Info size={24} color="#333333" />
+      </button>
       {/* Background Pattern */}
       <div className="absolute inset-0 opacity-10">
         <div className="w-full h-full" style={{
@@ -183,6 +194,118 @@ const HomeScreen: React.FC<HomeScreenProps> = ({
         <p className="text-[#333333] text-sm mt-4 text-center opacity-70 z-10">
           Win or draw a game to earn Roulette Keys!
         </p>
+      )}
+
+      {/* Info Modal */}
+      {showInfoModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-6 z-50"
+             onClick={() => setShowInfoModal(false)}>
+          <div className="bg-[#D8CFAF] rounded-3xl border-4 border-[#333333] shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+               onClick={(e) => e.stopPropagation()}>
+            <div className="sticky top-0 bg-[#D8CFAF] border-b-4 border-[#333333] p-6 flex items-center justify-between">
+              <h2 className="text-3xl font-black text-[#333333]">HOW TO PLAY</h2>
+              <button
+                onClick={() => setShowInfoModal(false)}
+                className="w-10 h-10 bg-white rounded-full border-3 border-[#333333]
+                           flex items-center justify-center hover:bg-gray-100
+                           active:transform active:scale-95 transition-all"
+              >
+                <X size={20} color="#333333" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-6">
+              <div className="bg-white rounded-xl border-3 border-[#333333] p-5 shadow-lg">
+                <h3 className="text-xl font-black text-[#E86A5D] mb-3">🎨 GAME OBJECTIVE</h3>
+                <p className="text-[#333333] leading-relaxed">
+                  Paint as much of the canvas as possible in 60 seconds! Compete against an AI bot to cover the most area with your color.
+                </p>
+              </div>
+
+              <div className="bg-white rounded-xl border-3 border-[#333333] p-5 shadow-lg">
+                <h3 className="text-xl font-black text-[#3DB4D8] mb-3">🎮 CONTROLS</h3>
+                <ul className="space-y-2 text-[#333333]">
+                  <li className="flex items-start">
+                    <span className="font-black mr-2">•</span>
+                    <span>Click and drag on the canvas to paint</span>
+                  </li>
+                  <li className="flex items-start">
+                    <span className="font-black mr-2">•</span>
+                    <span>Paint as much area as you can before time runs out</span>
+                  </li>
+                  <li className="flex items-start">
+                    <span className="font-black mr-2">•</span>
+                    <span>Collect power-ups for temporary boosts</span>
+                  </li>
+                </ul>
+              </div>
+
+              <div className="bg-white rounded-xl border-3 border-[#333333] p-5 shadow-lg">
+                <h3 className="text-xl font-black text-green-600 mb-3">⚡ POWER-UPS</h3>
+                <ul className="space-y-2 text-[#333333]">
+                  <li className="flex items-start">
+                    <span className="font-black mr-2">🚀</span>
+                    <span><strong>Speed Boost:</strong> Move faster for 5 seconds</span>
+                  </li>
+                  <li className="flex items-start">
+                    <span className="font-black mr-2">💥</span>
+                    <span><strong>Paint Splat:</strong> Instantly paint a large area</span>
+                  </li>
+                  <li className="flex items-start">
+                    <span className="font-black mr-2">📐</span>
+                    <span><strong>Enlarge Brush:</strong> Bigger brush size for 5 seconds</span>
+                  </li>
+                </ul>
+              </div>
+
+              <div className="bg-white rounded-xl border-3 border-[#333333] p-5 shadow-lg">
+                <h3 className="text-xl font-black text-yellow-600 mb-3">🔑 ROULETTE KEYS</h3>
+                <p className="text-[#333333] leading-relaxed mb-2">
+                  Earn Roulette Keys by winning or drawing games. Use keys to spin the roulette for rewards:
+                </p>
+                <ul className="space-y-2 text-[#333333]">
+                  <li className="flex items-start">
+                    <span className="font-black mr-2">💰</span>
+                    <span><strong>$CC Tokens:</strong> Win 5-250 on-chain tokens</span>
+                  </li>
+                  <li className="flex items-start">
+                    <span className="font-black mr-2">🎁</span>
+                    <span><strong>Extra Keys:</strong> Get 1-3 additional keys</span>
+                  </li>
+                  <li className="flex items-start">
+                    <span className="font-black mr-2">❌</span>
+                    <span><strong>No Reward:</strong> Better luck next time!</span>
+                  </li>
+                </ul>
+              </div>
+
+              <div className="bg-white rounded-xl border-3 border-[#333333] p-5 shadow-lg">
+                <h3 className="text-xl font-black text-purple-600 mb-3">🚀 BLOCKCHAIN FEATURES</h3>
+                <ul className="space-y-2 text-[#333333]">
+                  <li className="flex items-start">
+                    <span className="font-black mr-2">•</span>
+                    <span><strong>Immortalize Your Score:</strong> Record your best games on Arbitrum blockchain</span>
+                  </li>
+                  <li className="flex items-start">
+                    <span className="font-black mr-2">•</span>
+                    <span><strong>Token Rewards:</strong> Win real $CC tokens from the roulette</span>
+                  </li>
+                  <li className="flex items-start">
+                    <span className="font-black mr-2">•</span>
+                    <span><strong>Leaderboard:</strong> Compete with other players for the top spot</span>
+                  </li>
+                </ul>
+              </div>
+
+              <div className="bg-white rounded-xl border-3 border-[#333333] p-5 shadow-lg">
+                <h3 className="text-xl font-black text-red-600 mb-3">📊 DAILY LIMITS</h3>
+                <p className="text-[#333333] leading-relaxed">
+                  You can play up to <strong>{GAME_SETTINGS.dailyGameLimit} games per day</strong>. The limit resets at midnight UTC. Make every game count!
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

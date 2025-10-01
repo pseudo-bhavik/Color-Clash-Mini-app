@@ -3,6 +3,7 @@ import { useAccount, useConnect, useDisconnect, usePublicClient, useWalletClient
 import { ethers } from 'ethers';
 import { arbitrum } from '@wagmi/core/chains';
 import { useAuth } from './useAuth';
+import { neynarService } from '../services/neynarService';
 
 interface FarcasterUser {
   fid?: number;
@@ -14,17 +15,21 @@ interface FarcasterUser {
 const getFarcasterContext = (): FarcasterUser | null => {
   if (typeof window === 'undefined') return null;
 
-  if (window.farcaster?.user) {
-    return window.farcaster.user;
-  }
-
   try {
-    const frameContext = (window as any).sdk?.context;
-    if (frameContext?.user) {
-      return frameContext.user;
+    const sdk = (window as any).sdk;
+    if (sdk?.context?.user) {
+      console.log('Found Farcaster user via sdk.context.user:', sdk.context.user);
+      return sdk.context.user;
     }
+
+    if (window.farcaster?.user) {
+      console.log('Found Farcaster user via window.farcaster.user:', window.farcaster.user);
+      return window.farcaster.user;
+    }
+
+    console.log('No Farcaster user context found');
   } catch (e) {
-    console.log('Could not access frame context');
+    console.error('Error accessing Farcaster context:', e);
   }
 
   return null;
@@ -69,22 +74,28 @@ export const useWallet = () => {
       if (typeof window !== 'undefined') {
         await new Promise(resolve => setTimeout(resolve, 500));
 
-        if (window.farcaster?.sdk?.ready) {
-          console.log('Calling Farcaster SDK ready...');
-          window.farcaster.sdk.ready();
-
-          await new Promise(resolve => setTimeout(resolve, 300));
+        const sdk = (window as any).sdk;
+        if (sdk?.actions?.ready) {
+          console.log('Calling sdk.actions.ready() before wallet connection...');
+          try {
+            sdk.actions.ready();
+            await new Promise(resolve => setTimeout(resolve, 300));
+          } catch (error) {
+            console.error('Error calling sdk.actions.ready():', error);
+          }
         }
       }
 
       const isFarcasterEnv = typeof window !== 'undefined' &&
-        (window.farcaster || window.parent !== window);
+        ((window as any).sdk || window.farcaster || window.parent !== window);
 
+      const sdk = (window as any).sdk;
       console.log('Environment check:', {
         isFarcasterEnv,
-        hasFarcasterObject: !!window.farcaster,
-        hasUserData: !!window.farcaster?.user,
-        userData: window.farcaster?.user,
+        hasSdkObject: !!sdk,
+        hasUserData: !!sdk?.context?.user,
+        userData: sdk?.context?.user,
+        legacyFarcaster: !!window.farcaster,
         isInFrame: window.parent !== window,
         userAgent: navigator.userAgent
       });
@@ -181,6 +192,19 @@ export const useWallet = () => {
           username,
           rawData: fcUser
         });
+
+        if (farcasterFid && !username) {
+          console.log('Username not available from SDK, attempting Neynar API fallback...');
+          try {
+            const neynarData = await neynarService.getUserByFid(Number(farcasterFid));
+            if (neynarData) {
+              username = neynarData.username || neynarData.displayName;
+              console.log('Successfully fetched username from Neynar:', username);
+            }
+          } catch (error) {
+            console.error('Failed to fetch username from Neynar:', error);
+          }
+        }
       } else {
         console.log('No Farcaster context detected. This may be a regular wallet connection.');
       }

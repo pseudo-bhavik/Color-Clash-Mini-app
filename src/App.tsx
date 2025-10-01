@@ -26,20 +26,29 @@ const queryClient = new QueryClient({
   },
 });
 
-// Declare global farcaster type
 declare global {
   interface Window {
-    farcaster?: {
-      sdk?: {
+    sdk?: {
+      actions: {
         ready: () => void;
       };
-      user?: {
-        fid?: number;
-        username?: string;
-        displayName?: string;
-        pfpUrl?: string;
+      context: {
+        user?: {
+          fid: number;
+          username?: string;
+          displayName?: string;
+          pfpUrl?: string;
+          bio?: string;
+          location?: {
+            placeId: string;
+            description: string;
+          };
+        };
+        location?: any;
+        client?: any;
       };
     };
+    farcaster?: any;
   }
 }
 
@@ -57,16 +66,43 @@ function AppContent() {
 
   useEffect(() => {
     const initializeFarcaster = () => {
-      if (window.farcaster?.sdk?.ready) {
-        console.log('Farcaster SDK detected, calling ready on app initialization...');
-        window.farcaster.sdk.ready();
+      if (typeof window === 'undefined') return;
+
+      const sdk = (window as any).sdk;
+
+      if (sdk?.actions?.ready) {
+        console.log('Farcaster SDK detected, calling sdk.actions.ready()...');
+        console.log('SDK Context:', {
+          user: sdk.context?.user,
+          location: sdk.context?.location,
+          client: sdk.context?.client
+        });
+
+        try {
+          sdk.actions.ready();
+          console.log('SDK ready() called successfully');
+        } catch (error) {
+          console.error('Error calling sdk.actions.ready():', error);
+        }
+      } else {
+        console.log('Farcaster SDK not yet available. Checking paths:', {
+          sdkExists: !!sdk,
+          sdkActions: !!sdk?.actions,
+          sdkActionsReady: !!sdk?.actions?.ready,
+          windowFarcaster: !!(window as any).farcaster
+        });
       }
     };
 
     initializeFarcaster();
-    const timeout = setTimeout(initializeFarcaster, 1000);
 
-    return () => clearTimeout(timeout);
+    const timeout1 = setTimeout(initializeFarcaster, 500);
+    const timeout2 = setTimeout(initializeFarcaster, 1500);
+
+    return () => {
+      clearTimeout(timeout1);
+      clearTimeout(timeout2);
+    };
   }, []);
 
   const handleAuthenticate = async () => {

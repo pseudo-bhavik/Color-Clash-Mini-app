@@ -35,15 +35,25 @@ export const getFarcasterContext = () => {
 
   try {
     const windowSdk = (window as any).sdk;
+    let user = null;
+
     if (windowSdk?.context?.user) {
-      return windowSdk.context.user;
+      user = windowSdk.context.user;
+    } else if (window.farcaster?.user) {
+      user = window.farcaster.user;
+    } else if (sdk.context?.user) {
+      user = sdk.context.user;
     }
 
-    if (window.farcaster?.user) {
-      return window.farcaster.user;
-    }
+    if (!user) return null;
 
-    return sdk.context?.user || null;
+    // Extract only the primitive values we need
+    return {
+      fid: typeof user.fid === 'number' ? user.fid : undefined,
+      username: typeof user.username === 'string' ? user.username : undefined,
+      displayName: typeof user.displayName === 'string' ? user.displayName : undefined,
+      pfpUrl: typeof user.pfpUrl === 'string' ? user.pfpUrl : undefined,
+    };
   } catch (error) {
     console.error('Error accessing Farcaster context:', error);
     return null;

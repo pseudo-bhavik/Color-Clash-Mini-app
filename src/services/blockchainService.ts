@@ -58,38 +58,49 @@ export interface ClaimRewardResponse {
 }
 
 // Helper function to detect if we're using Farcaster wallet
-function isFarcasterWallet(provider: any): boolean {
+function isFarcasterWallet(signer: any): boolean {
   try {
-    // Check if it's a Farcaster wallet by looking at the provider type
-    const providerString = provider?.toString() || '';
-    const hasEthersProvider = provider?.constructor?.name === 'BrowserProvider';
-    const transport = provider?._transport || provider?.transport;
-    const transportUrl = transport?.url || '';
+    const provider = signer?.provider;
 
-    // Check for Farcaster-specific indicators
+    // Check multiple indicators
+    const checks = {
+      // Check window/global context
+      hasSdk: typeof window !== 'undefined' && !!(window as any).sdk,
+      hasFarcasterGlobal: typeof window !== 'undefined' && !!window.farcaster,
+      isInFrame: typeof window !== 'undefined' && window.parent !== window,
+
+      // Check provider properties
+      providerType: provider?.constructor?.name || '',
+
+      // Check transport/connection details
+      transport: provider?._transport || provider?.transport,
+    };
+
+    // Get transport info
+    const transport = checks.transport;
+    const transportString = transport?.toString() || '';
+    const transportType = transport?.type || '';
+
+    // Farcaster wallet indicators
     const isFarcaster =
-      providerString.includes('farcaster') ||
-      transportUrl.includes('farcaster') ||
-      (typeof window !== 'undefined' &&
-       ((window as any).sdk?.context ||
-        window.farcaster ||
-        window.parent !== window));
+      checks.hasSdk ||
+      checks.hasFarcasterGlobal ||
+      checks.isInFrame ||
+      transportString.includes('farcaster') ||
+      transportType.includes('farcaster');
 
     console.log('Farcaster wallet detection:', {
       isFarcaster,
-      providerString,
-      hasEthersProvider,
-      transportUrl,
-      hasSdk: !!(window as any).sdk,
-      hasFarcasterGlobal: !!window.farcaster,
-      isInFrame: window.parent !== window
+      ...checks,
+      transportString,
+      transportType
     });
 
     return isFarcaster;
   } catch (e) {
-    console.warn('Error detecting Farcaster wallet:', e);
-    // If in doubt and we see any frame indicators, assume it's Farcaster
-    return typeof window !== 'undefined' && window.parent !== window;
+    console.warn('Error detecting Farcaster wallet, assuming yes for safety:', e);
+    // If in doubt, assume it's Farcaster to avoid eth_call errors
+    return true;
   }
 }
 
@@ -139,8 +150,7 @@ export async function recordScoreOnChain(
     });
 
     // Detect if we're using Farcaster wallet BEFORE making any calls
-    const provider = signer.provider;
-    const isFarcaster = isFarcasterWallet(provider);
+    const isFarcaster = isFarcasterWallet(signer);
     console.log('Using Farcaster wallet:', isFarcaster);
 
     // Create contract instance with user's signer
@@ -291,8 +301,7 @@ export async function claimRewardOnChain(
     }
 
     // Detect if we're using Farcaster wallet BEFORE making any calls
-    const provider = signer.provider;
-    const isFarcaster = isFarcasterWallet(provider);
+    const isFarcaster = isFarcasterWallet(signer);
     console.log('Using Farcaster wallet for claim:', isFarcaster);
 
     // Create contract instance with user's signer

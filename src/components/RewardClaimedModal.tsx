@@ -4,6 +4,7 @@ import { useModeration } from '../hooks/useModeration';
 import { getClaimSignature, claimRewardOnChain } from '../services/blockchainService';
 import { CONTRACT_ADDRESSES } from '../config/gameConfig';
 import { useWallet } from '../hooks/useWallet';
+import { ethers } from 'ethers';
 
 interface RewardClaimedModalProps {
   reward: {amount: number; label: string; type: string};
@@ -83,10 +84,13 @@ const RewardClaimedModal: React.FC<RewardClaimedModalProps> = ({
 
       console.log('Please confirm the transaction in your wallet...');
 
+      // Convert amount to wei (token has 18 decimals)
+      const amountInWei = ethers.parseUnits(reward.amount.toString(), 18);
+
       const claimResponse = await claimRewardOnChain({
         signer,
         recipient: walletAddress,
-        amount: reward.amount,
+        amount: amountInWei,
         nonce: signatureResponse.nonce!,
         signature: signatureResponse.signature!,
         contractAddress: CONTRACT_ADDRESSES.REWARD_DISTRIBUTOR

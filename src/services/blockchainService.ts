@@ -42,7 +42,7 @@ export interface GetClaimSignatureResponse {
 export interface ClaimRewardRequest {
   signer: ethers.JsonRpcSigner;
   recipient: string;
-  amount: number;
+  amount: bigint;
   nonce: string;
   signature: string;
   contractAddress: string;

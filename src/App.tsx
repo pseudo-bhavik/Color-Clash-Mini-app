@@ -16,6 +16,7 @@ import { useLeaderboard } from './hooks/useLeaderboard';
 import { useAuth } from './hooks/useAuth';
 import { useToast } from './hooks/useToast';
 import ToastContainer from './components/ToastContainer';
+import { ROULETTE_REWARDS } from './config/gameConfig';
 
 // Create a client for React Query with proper error handling hello
 const queryClient = new QueryClient({
@@ -142,16 +143,13 @@ function AppContent() {
   const handleRouletteResult = (reward: RouletteReward) => {
     if (reward.type === 'inGameCurrency') {
       addRouletteKeys(reward.amount);
-      setClaimedReward(reward);
     } else if (reward.type === 'onChainToken') {
-      setClaimedReward(reward);
-
       if (isAuthenticated && user) {
         updateUserStats(0, 0, reward.amount);
       }
     }
 
-    setGameState(gameResult ? 'postGame' : 'home');
+    setClaimedReward(reward);
   };
 
   const handleCloseRewardModal = () => {
@@ -202,6 +200,7 @@ function AppContent() {
           
           {gameState === 'roulette' && (
             <RouletteScreen
+              rouletteRewards={ROULETTE_REWARDS}
               rouletteKeys={rouletteKeys}
               onSpendKeys={spendRouletteKeys}
               onResult={handleRouletteResult}

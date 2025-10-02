@@ -141,10 +141,10 @@ const RewardClaimedModal: React.FC<RewardClaimedModalProps> = ({
             </div>
           </div>
           <h2 className="text-2xl font-black text-[#333333] mb-2">
-            CONGRATULATIONS!
+            {reward.type === 'noReward' ? 'TRY AGAIN!' : 'CONGRATULATIONS!'}
           </h2>
           <p className="text-xl text-[#E86A5D] font-black mb-2">
-            You won {reward.label}!
+            {reward.type === 'noReward' ? 'Better luck next time!' : `You won ${reward.label}!`}
           </p>
           {reward.type === 'onChainToken' && (
             <p className="text-sm text-[#333333] opacity-70 mb-2">
@@ -154,6 +154,11 @@ const RewardClaimedModal: React.FC<RewardClaimedModalProps> = ({
           {reward.type === 'inGameCurrency' && (
             <p className="text-sm text-[#333333] opacity-70">
               Keys added to your account!
+            </p>
+          )}
+          {reward.type === 'noReward' && (
+            <p className="text-sm text-[#333333] opacity-70">
+              Spin again to win amazing rewards!
             </p>
           )}
         </div>
@@ -175,7 +180,7 @@ const RewardClaimedModal: React.FC<RewardClaimedModalProps> = ({
             </button>
           )}
 
-          {reward.type === 'onChainToken' && !claimed && (
+          {reward.type === 'onChainToken' && reward.amount > 0 && (
             <button
               onClick={handleShareOnFarcaster}
               className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white text-lg font-black py-3 px-6

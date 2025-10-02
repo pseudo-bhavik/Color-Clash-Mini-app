@@ -35,8 +35,8 @@ const mockRewards: RouletteReward[] = [
     { label: '5K $CC', probability: 0.10, type: 'onChainToken', amount: 5000 },
     { label: '10K $CC', probability: 0.04, type: 'onChainToken', amount: 10000 },
     { label: '50K $CC', probability: 0.01, type: 'onChainToken', amount: 50000 },
-    { label: '+2 Keys', probability: 0.25, type: 'inGame', amount: 2 },
-    { label: 'Try Again', probability: 0.40, type: 'nothing', amount: 0 },
+    { label: '+2 Keys', probability: 0.25, type: 'inGameCurrency', amount: 2 },
+    { label: 'Try Again', probability: 0.40, type: 'noReward', amount: 0 },
 ];
 
 const RouletteScreen: React.FC<RouletteScreenProps> = ({
@@ -92,17 +92,23 @@ const RouletteScreen: React.FC<RouletteScreenProps> = ({
     const segmentIndex = rouletteRewards.findIndex(r => r.label === winningReward.label);
     const segmentAngle = 360 / rouletteRewards.length;
     const targetAngle = segmentIndex * segmentAngle + (segmentAngle / 2);
-    
+
     const totalRotation = rotation + 2160 + (360 - targetAngle);
     setRotation(totalRotation);
 
     setTimeout(() => {
       setIsSpinning(false);
+
       if (winningReward.type === 'onChainToken' && winningReward.amount > 0) {
         if (walletAddress && onUpdateLeaderboard) {
           onUpdateLeaderboard(walletAddress, winningReward.amount, username, farcasterFid);
         }
+      } else if (winningReward.type === 'inGameCurrency') {
+        console.log('Won in-game currency:', winningReward.amount);
+      } else if (winningReward.type === 'noReward') {
+        console.log('No reward - better luck next time!');
       }
+
       onResult(winningReward);
     }, 4000);
   };

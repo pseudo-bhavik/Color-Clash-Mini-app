@@ -220,11 +220,22 @@ export async function recordScoreOnChain(
 
     if (isFarcaster) {
       console.log('Adding explicit gas parameters for Farcaster wallet');
-      txParams.gasLimit = 200000; // Reasonable default for recordScore transaction
+      txParams.gasLimit = 500000; // Increased gas limit for array operations in recordScore
     }
 
     const tx = await contract.recordScore(score, playerName, txParams);
     console.log('Transaction sent:', tx.hash, 'with fee:', ethers.formatEther(feeInWei), 'ETH');
+
+    // For Farcaster wallet, don't wait for receipt (eth_getTransactionReceipt not supported)
+    if (isFarcaster) {
+      console.log('Farcaster wallet - returning immediately without waiting for receipt');
+      return {
+        success: true,
+        transactionHash: tx.hash,
+        blockNumber: undefined,
+        gasUsed: undefined
+      };
+    }
 
     const receipt = await tx.wait();
     console.log('Transaction confirmed:', receipt.hash, 'Block:', receipt.blockNumber);
@@ -363,10 +374,22 @@ export async function claimRewardOnChain(
 
     if (isFarcaster) {
       console.log('Adding explicit gas parameters for Farcaster wallet claim');
-      txParams.gasLimit = 250000; // Reasonable default for claim transaction
+      txParams.gasLimit = 350000; // Increased gas limit for claim transaction
     }
 
     const tx = await contract.claimRewardWithSignature(recipient, amount, nonce, signature, txParams);
+
+    // For Farcaster wallet, don't wait for receipt (eth_getTransactionReceipt not supported)
+    if (isFarcaster) {
+      console.log('Farcaster wallet - returning immediately without waiting for receipt');
+      return {
+        success: true,
+        transactionHash: tx.hash,
+        blockNumber: undefined,
+        gasUsed: undefined
+      };
+    }
+
     const receipt = await tx.wait();
 
     return {

@@ -59,6 +59,8 @@ export interface ClaimRewardResponse {
 
 // Helper function to detect if we're using Farcaster wallet
 function isFarcasterWallet(signer: any): boolean {
+  console.log('=== FARCASTER DETECTION START ===');
+
   try {
     const provider = signer?.provider;
 
@@ -66,8 +68,12 @@ function isFarcasterWallet(signer: any): boolean {
     const checks = {
       // Check window/global context
       hasSdk: typeof window !== 'undefined' && !!(window as any).sdk,
-      hasFarcasterGlobal: typeof window !== 'undefined' && !!window.farcaster,
+      hasFarcasterGlobal: typeof window !== 'undefined' && !!(window as any).farcaster,
       isInFrame: typeof window !== 'undefined' && window.parent !== window,
+      hasWarpcastUserAgent: typeof navigator !== 'undefined' && navigator.userAgent.toLowerCase().includes('warpcast'),
+
+      // Check signer properties
+      signerType: signer?.constructor?.name || '',
 
       // Check provider properties
       providerType: provider?.constructor?.name || '',
@@ -80,25 +86,35 @@ function isFarcasterWallet(signer: any): boolean {
     const transport = checks.transport;
     const transportString = transport?.toString() || '';
     const transportType = transport?.type || '';
+    const transportUrl = transport?.url || '';
 
-    // Farcaster wallet indicators
+    // Log everything for debugging
+    console.log('Detection checks:', {
+      ...checks,
+      transportString,
+      transportType,
+      transportUrl,
+      signerKeys: signer ? Object.keys(signer) : [],
+      providerKeys: provider ? Object.keys(provider) : [],
+    });
+
+    // Farcaster wallet indicators - be VERY aggressive
     const isFarcaster =
       checks.hasSdk ||
       checks.hasFarcasterGlobal ||
       checks.isInFrame ||
+      checks.hasWarpcastUserAgent ||
       transportString.includes('farcaster') ||
-      transportType.includes('farcaster');
+      transportType.includes('farcaster') ||
+      transportUrl.includes('farcaster') ||
+      // Default to true if we can't confidently say it's NOT Farcaster
+      (!checks.providerType.includes('JsonRpc') && checks.isInFrame);
 
-    console.log('Farcaster wallet detection:', {
-      isFarcaster,
-      ...checks,
-      transportString,
-      transportType
-    });
+    console.log('=== FARCASTER DETECTION RESULT:', isFarcaster, '===');
 
     return isFarcaster;
   } catch (e) {
-    console.warn('Error detecting Farcaster wallet, assuming yes for safety:', e);
+    console.error('Error detecting Farcaster wallet, DEFAULTING TO TRUE:', e);
     // If in doubt, assume it's Farcaster to avoid eth_call errors
     return true;
   }

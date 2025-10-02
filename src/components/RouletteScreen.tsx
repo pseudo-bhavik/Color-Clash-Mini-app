@@ -180,18 +180,27 @@ const RouletteScreen: React.FC<RouletteScreenProps> = ({
                 >
                   {/* Reward text positioned radially */}
                   <div
-                    className="absolute text-white font-black leading-tight"
+                    className="absolute font-black leading-none"
                     style={{
                       top: '25%',
                       left: '50%',
                       transform: `translate(-50%, -50%) rotate(${segmentAngle / 2}deg)`,
                       transformOrigin: '50% 50%',
                       writingMode: 'vertical-rl',
-                      textOrientation: 'mixed',
-                      fontSize: '14px',
+                      textOrientation: 'upright',
+                      fontSize: '16px',
                       fontWeight: '900',
-                      letterSpacing: '0.5px',
-                      textShadow: '2px 2px 4px rgba(0,0,0,0.9), -1px -1px 4px rgba(0,0,0,0.9), 0 0 8px rgba(0,0,0,0.8)'
+                      letterSpacing: '-1px',
+                      color: '#FFFFFF',
+                      textShadow: `
+                        0 0 4px rgba(0,0,0,1),
+                        0 0 8px rgba(0,0,0,1),
+                        2px 2px 2px rgba(0,0,0,0.9),
+                        -2px -2px 2px rgba(0,0,0,0.9),
+                        2px -2px 2px rgba(0,0,0,0.9),
+                        -2px 2px 2px rgba(0,0,0,0.9)
+                      `,
+                      WebkitTextStroke: '1px rgba(0,0,0,0.8)'
                     }}
                   >
                     {reward.label}

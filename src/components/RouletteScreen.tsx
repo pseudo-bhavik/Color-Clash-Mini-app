@@ -158,10 +158,14 @@ const RouletteScreen: React.FC<RouletteScreenProps> = ({
           {ROULETTE_REWARDS.map((reward, index) => {
             const startAngle = index * segmentAngle;
             const colors = [
-              '#E86A5D', '#3DB4D8', '#10B981', '#F59E0B', 
+              '#E86A5D', '#3DB4D8', '#10B981', '#F59E0B',
               '#EF4444', '#8B5CF6', '#FF6B9D', '#00D4AA'
             ];
-            
+
+            const words = reward.label.split(' ');
+            const isSingleWord = words.length === 1;
+            const fontSize = reward.label.length > 4 ? '14px' : '16px';
+
             return (
               <div
                 key={index}
@@ -171,21 +175,20 @@ const RouletteScreen: React.FC<RouletteScreenProps> = ({
                   clipPath: `polygon(50% 50%, 50% 0%, ${50 + 50 * Math.cos((segmentAngle * Math.PI) / 180)}% ${50 - 50 * Math.sin((segmentAngle * Math.PI) / 180)}%)`
                 }}
               >
-                <div 
+                <div
                   className="w-full h-full relative border-r border-[#333333]/30"
-                  style={{ 
+                  style={{
                     background: `linear-gradient(135deg, ${colors[index % colors.length]}, ${colors[index % colors.length]}cc)`,
                     boxShadow: 'inset 0 0 10px rgba(0,0,0,0.2)'
                   }}
                 >
-                  {/* Reward text positioned radially */}
                   <div
-                    className="absolute font-black text-center pointer-events-none"
+                    className="absolute font-black pointer-events-none flex flex-col items-center justify-center"
                     style={{
                       top: '50%',
                       left: '50%',
                       transform: `translate(-50%, -50%) translateY(-95px) rotate(${segmentAngle / 2}deg)`,
-                      fontSize: '16px',
+                      fontSize,
                       fontWeight: '900',
                       color: '#FFFFFF',
                       textShadow: `
@@ -196,17 +199,25 @@ const RouletteScreen: React.FC<RouletteScreenProps> = ({
                         2px -2px 0 rgba(0,0,0,1),
                         -2px 2px 0 rgba(0,0,0,1)
                       `,
-                      WebkitTextStroke: '2px rgba(0,0,0,1)',
-                      whiteSpace: 'nowrap',
-                      width: 'auto',
-                      letterSpacing: '0.5px'
+                      WebkitTextStroke: '1.5px rgba(0,0,0,1)',
+                      letterSpacing: '1px',
+                      lineHeight: '1.2',
+                      writingMode: 'vertical-rl',
+                      textOrientation: 'upright'
                     }}
                   >
-                    {reward.label}
+                    {isSingleWord ? (
+                      <span>{reward.label}</span>
+                    ) : (
+                      words.map((word, wordIndex) => (
+                        <span key={wordIndex} style={{ display: 'block' }}>
+                          {word}
+                        </span>
+                      ))
+                    )}
                   </div>
-                  
-                  {/* Shine effect */}
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent 
+
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent
                                  transform rotate-12"></div>
                 </div>
               </div>

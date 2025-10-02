@@ -114,32 +114,70 @@ export async function recordScoreOnChain(
     try {
       feeInWei = await contract.getRecordingFee();
       console.log('Recording fee from contract:', ethers.formatEther(feeInWei), 'ETH');
-    } catch (feeError) {
+    } catch (feeError: any) {
       console.error('Failed to fetch recording fee:', feeError);
-      return {
-        success: false,
-        error: 'Failed to fetch recording fee from contract',
-        details: feeError instanceof Error ? feeError.message : String(feeError)
-      };
+
+      // Check if it's a Farcaster wallet limitation
+      if (feeError?.message?.includes('eth_call') ||
+          feeError?.message?.includes('does not support the requested method')) {
+        console.log('Farcaster wallet detected - using default fee of 0.0001 ETH');
+        feeInWei = ethers.parseEther('0.0001');
+      } else {
+        return {
+          success: false,
+          error: 'Failed to fetch recording fee from contract',
+          details: feeError instanceof Error ? feeError.message : String(feeError)
+        };
+      }
     }
 
-    // Estimate gas before sending transaction
+    // Skip gas estimation for Farcaster wallet as it may not support eth_call
+    const provider = signer.provider;
+    let shouldSkipEstimation = false;
+
+    try {
+      // Try to check if we're dealing with Farcaster wallet
+      const providerInfo = await provider?.getNetwork();
+      console.log('Provider network:', providerInfo);
+    } catch (e) {
+      console.log('Could not fetch provider network, proceeding with caution');
+    }
+
+    // Attempt gas estimation, but don't fail if it doesn't work
     try {
       const gasEstimate = await contract.recordScore.estimateGas(score, playerName, { value: feeInWei });
       console.log('Estimated gas:', gasEstimate.toString());
-    } catch (estimateError) {
-      console.error('Gas estimation failed:', estimateError);
-      return {
-        success: false,
-        error: 'Transaction would fail - contract may not be deployed or configured correctly',
-        details: estimateError instanceof Error ? estimateError.message : String(estimateError)
-      };
+    } catch (estimateError: any) {
+      console.warn('Gas estimation failed (this is OK for Farcaster wallet):', estimateError?.message);
+
+      // If it's an eth_call error, we'll proceed anyway
+      if (estimateError?.message?.includes('eth_call') ||
+          estimateError?.message?.includes('does not support the requested method')) {
+        console.log('Farcaster wallet detected - skipping gas estimation');
+        shouldSkipEstimation = true;
+      } else {
+        // For other errors, still fail
+        console.error('Gas estimation failed with non-Farcaster error:', estimateError);
+        return {
+          success: false,
+          error: 'Transaction would fail - contract may not be deployed or configured correctly',
+          details: estimateError instanceof Error ? estimateError.message : String(estimateError)
+        };
+      }
     }
 
     // Send transaction with ETH fee (user pays gas + fee)
-    const tx = await contract.recordScore(score, playerName, {
+    // For Farcaster wallet, we provide explicit gas parameters
+    const txParams: any = {
       value: feeInWei
-    });
+    };
+
+    if (shouldSkipEstimation) {
+      console.log('Adding explicit gas parameters for Farcaster wallet');
+      txParams.gasLimit = 200000; // Reasonable default for recordScore transaction
+    }
+
+    const tx = await contract.recordScore(score, playerName, txParams);
     console.log('Transaction sent:', tx.hash, 'with fee:', ethers.formatEther(feeInWei), 'ETH');
 
     const receipt = await tx.wait();
@@ -239,17 +277,52 @@ export async function claimRewardOnChain(
       signer
     );
 
-    // Check if nonce is already used
-    const isUsed = await contract.isNonceUsed(recipient, amount, nonce);
-    if (isUsed) {
-      return {
-        success: false,
-        error: 'This reward has already been claimed'
-      };
+    // Check if nonce is already used (skip for Farcaster wallet)
+    let isUsed = false;
+    try {
+      isUsed = await contract.isNonceUsed(recipient, amount, nonce);
+      if (isUsed) {
+        return {
+          success: false,
+          error: 'This reward has already been claimed'
+        };
+      }
+    } catch (nonceError: any) {
+      console.warn('Could not check nonce (this is OK for Farcaster wallet):', nonceError?.message);
+
+      // For Farcaster wallet, we'll skip the nonce check and let the contract handle it
+      if (!nonceError?.message?.includes('eth_call') &&
+          !nonceError?.message?.includes('does not support the requested method')) {
+        // If it's not a Farcaster wallet issue, throw the error
+        throw nonceError;
+      }
+      console.log('Farcaster wallet detected - proceeding without nonce check');
+    }
+
+    // Estimate gas for claim transaction (optional for Farcaster)
+    let shouldSkipEstimation = false;
+    try {
+      const gasEstimate = await contract.claimRewardWithSignature.estimateGas(recipient, amount, nonce, signature);
+      console.log('Estimated gas for claim:', gasEstimate.toString());
+    } catch (estimateError: any) {
+      console.warn('Gas estimation failed (this is OK for Farcaster wallet):', estimateError?.message);
+
+      if (estimateError?.message?.includes('eth_call') ||
+          estimateError?.message?.includes('does not support the requested method')) {
+        console.log('Farcaster wallet detected - skipping gas estimation for claim');
+        shouldSkipEstimation = true;
+      }
     }
 
     // Send transaction (user pays gas)
-    const tx = await contract.claimRewardWithSignature(recipient, amount, nonce, signature);
+    const txParams: any = {};
+
+    if (shouldSkipEstimation) {
+      console.log('Adding explicit gas parameters for Farcaster wallet claim');
+      txParams.gasLimit = 250000; // Reasonable default for claim transaction
+    }
+
+    const tx = await contract.claimRewardWithSignature(recipient, amount, nonce, signature, txParams);
     const receipt = await tx.wait();
 
     return {

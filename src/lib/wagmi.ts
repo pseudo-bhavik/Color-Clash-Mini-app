@@ -1,17 +1,15 @@
 import { createConfig, http } from '@wagmi/core';
-import { baseSepolia } from '@wagmi/core/chains';
+import { baseSepolia  } from '@wagmi/core/chains';
 import { farcasterMiniApp } from '@farcaster/miniapp-wagmi-connector';
 import { injected } from '@wagmi/connectors';
 
 export const wagmiConfig = createConfig({
-  chains: [baseSepolia],
+  chains: [baseSepolia ],
   connectors: [
-    farcasterMiniApp({
-      relay: 'https://relay.farcaster.xyz',
-    }),
+    farcasterMiniApp(),
     injected()
   ],
   transports: {
-    [baseSepolia.id]: http()
+    [baseSepolia .id]: http()
   },
 });

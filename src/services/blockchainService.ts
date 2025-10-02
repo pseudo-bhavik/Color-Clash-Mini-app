@@ -163,8 +163,8 @@ export async function recordScoreOnChain(
     // Fetch current recording fee from contract (skip for Farcaster)
     let feeInWei: bigint;
     if (isFarcaster) {
-      console.log('Farcaster wallet detected - using default fee of 0.0001 ETH');
-      feeInWei = ethers.parseEther('0.0001');
+      console.log('Farcaster wallet detected - using default fee of 0.00001 ETH');
+      feeInWei = ethers.parseEther('0.00001');
     } else {
       try {
         feeInWei = await contract.getRecordingFee();
@@ -173,8 +173,8 @@ export async function recordScoreOnChain(
         console.error('Failed to fetch recording fee:', feeError);
 
         // Fallback to default if any error occurs
-        console.log('Using default fee of 0.0001 ETH as fallback');
-        feeInWei = ethers.parseEther('0.0001');
+        console.log('Using default fee of 0.00001 ETH as fallback');
+        feeInWei = ethers.parseEther('0.00001');
       }
     }
 

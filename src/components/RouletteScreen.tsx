@@ -188,17 +188,13 @@ const RouletteScreen: React.FC<RouletteScreenProps> = ({
                       transformOrigin: '50% 50%',
                       writingMode: 'vertical-rl',
                       textOrientation: 'mixed',
-                      fontSize: '18px',
+                      fontSize: '14px',
                       fontWeight: '900',
-                      letterSpacing: '1px',
-                      textShadow: '3px 3px 6px rgba(0,0,0,1), -2px -2px 6px rgba(0,0,0,1), 0 0 10px rgba(0,0,0,0.9), 0 0 15px rgba(0,0,0,0.7)'
+                      letterSpacing: '0.5px',
+                      textShadow: '2px 2px 4px rgba(0,0,0,0.9), -1px -1px 4px rgba(0,0,0,0.9), 0 0 8px rgba(0,0,0,0.8)'
                     }}
                   >
-                    <div className="bg-black/90 rounded-lg px-2 py-3 backdrop-blur-md
-                                   border-2 border-white/70 shadow-2xl
-                                   ring-2 ring-black/60">
-                      {reward.label}
-                    </div>
+                    {reward.label}
                   </div>
                   
                   {/* Shine effect */}

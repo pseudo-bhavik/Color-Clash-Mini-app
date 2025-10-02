@@ -184,21 +184,22 @@ const RouletteScreen: React.FC<RouletteScreenProps> = ({
                     style={{
                       top: '50%',
                       left: '50%',
-                      transform: `translate(-50%, -50%) translateY(-110px) rotate(${segmentAngle / 2}deg)`,
-                      fontSize: '14px',
+                      transform: `translate(-50%, -50%) translateY(-95px) rotate(${segmentAngle / 2}deg)`,
+                      fontSize: '16px',
                       fontWeight: '900',
                       color: '#FFFFFF',
                       textShadow: `
-                        0 2px 4px rgba(0,0,0,0.9),
-                        0 0 8px rgba(0,0,0,0.8),
-                        2px 2px 0 rgba(0,0,0,0.9),
-                        -2px -2px 0 rgba(0,0,0,0.9),
-                        2px -2px 0 rgba(0,0,0,0.9),
-                        -2px 2px 0 rgba(0,0,0,0.9)
+                        0 3px 6px rgba(0,0,0,1),
+                        0 0 10px rgba(0,0,0,0.9),
+                        2px 2px 0 rgba(0,0,0,1),
+                        -2px -2px 0 rgba(0,0,0,1),
+                        2px -2px 0 rgba(0,0,0,1),
+                        -2px 2px 0 rgba(0,0,0,1)
                       `,
-                      WebkitTextStroke: '1.5px rgba(0,0,0,0.9)',
+                      WebkitTextStroke: '2px rgba(0,0,0,1)',
                       whiteSpace: 'nowrap',
-                      width: 'auto'
+                      width: 'auto',
+                      letterSpacing: '0.5px'
                     }}
                   >
                     {reward.label}

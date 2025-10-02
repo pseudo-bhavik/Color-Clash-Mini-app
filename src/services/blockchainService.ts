@@ -181,6 +181,9 @@ export async function getClaimSignature(
   try {
     const apiUrl = `${SUPABASE_URL}/functions/v1/distribute-reward`;
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
+
     const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
@@ -188,15 +191,28 @@ export async function getClaimSignature(
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(request),
+      signal: controller.signal
     });
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
 
     const data = await response.json();
     return data;
   } catch (error) {
     console.error('Error getting claim signature:', error);
+
+    let errorMessage = 'Failed to get claim signature';
+    if (error instanceof Error && error.name === 'AbortError') {
+      errorMessage = 'Request timeout - please try again';
+    }
+
     return {
       success: false,
-      error: 'Failed to get claim signature',
+      error: errorMessage,
       details: error instanceof Error ? error.message : String(error),
     };
   }

@@ -18,10 +18,10 @@ export const GAME_SETTINGS: GameSettings = {
 };
 
 export const ROULETTE_REWARDS: RouletteReward[] = [
-  { type: 'onChainToken', amount: 1000, label: '1K $CC', probability: 0.55 },
-  { type: 'onChainToken', amount: 5000, label: '5K $CC', probability: 0.20 },
-  { type: 'onChainToken', amount: 10000, label: '10K $CC', probability: 0.15 },
-  { type: 'onChainToken', amount: 50000, label: '50K $CC', probability: 0.05 },
+  { type: 'onChainToken', amount: 1000, label: '1K', probability: 0.55 },
+  { type: 'onChainToken', amount: 5000, label: '5K', probability: 0.20 },
+  { type: 'onChainToken', amount: 10000, label: '10K', probability: 0.15 },
+  { type: 'onChainToken', amount: 50000, label: '50K', probability: 0.05 },
   { type: 'inGameCurrency', amount: 2, label: '+2 Keys', probability: 0.00 },
   { type: 'noReward', amount: 0, label: 'Try Again', probability: 0.05 },
 ];

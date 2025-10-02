@@ -66,24 +66,23 @@ const RewardClaimedModal: React.FC<RewardClaimedModalProps> = ({
     try {
       const playerName = walletAddress.slice(0, 8);
 
-      // Notify user about the process
       console.log('Getting claim authorization...');
 
-      // Get signature from backend
-      const signatureResponse = await getClaimSignature({
-        walletAddress,
-        rewardAmount: reward.amount,
-        playerName
-      });
+      const [signatureResponse] = await Promise.all([
+        getClaimSignature({
+          walletAddress,
+          rewardAmount: reward.amount,
+          playerName
+        }),
+        new Promise(resolve => setTimeout(resolve, 1000))
+      ]);
 
       if (!signatureResponse.success) {
         throw new Error(signatureResponse.error || 'Failed to get claim authorization');
       }
 
-      // Notify user they need to sign
       console.log('Please confirm the transaction in your wallet...');
 
-      // Claim on-chain with user's wallet - THIS IS THE ONLY SIGNATURE REQUIRED
       const claimResponse = await claimRewardOnChain({
         signer,
         recipient: walletAddress,
@@ -105,6 +104,8 @@ const RewardClaimedModal: React.FC<RewardClaimedModalProps> = ({
 
       if (errorMessage.includes('user rejected')) {
         alert('Transaction was cancelled. You can claim your tokens anytime.');
+      } else if (errorMessage.includes('timeout') || errorMessage.includes('Request timeout')) {
+        alert('Request timeout. Please check your connection and try again.');
       } else if (errorMessage.includes('insufficient funds')) {
         alert('Insufficient funds to complete transaction.');
       } else if (errorMessage.includes('Insufficient contract balance') || errorMessage.includes('Insufficient tokens in reward pool')) {

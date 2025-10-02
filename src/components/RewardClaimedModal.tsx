@@ -61,7 +61,10 @@ const RewardClaimedModal: React.FC<RewardClaimedModalProps> = ({
     setIsClaiming(true);
     try {
       const playerName = walletAddress.slice(0, 8);
-      
+
+      // Notify user about the process
+      console.log('Getting claim authorization...');
+
       // Get signature from backend
       const signatureResponse = await getClaimSignature({
         walletAddress,
@@ -73,7 +76,10 @@ const RewardClaimedModal: React.FC<RewardClaimedModalProps> = ({
         throw new Error(signatureResponse.error || 'Failed to get claim authorization');
       }
 
-      // Claim on-chain with user's wallet
+      // Notify user they need to sign
+      console.log('Please confirm the transaction in your wallet...');
+
+      // Claim on-chain with user's wallet - THIS IS THE ONLY SIGNATURE REQUIRED
       const claimResponse = await claimRewardOnChain({
         signer,
         recipient: walletAddress,
@@ -88,11 +94,23 @@ const RewardClaimedModal: React.FC<RewardClaimedModalProps> = ({
         alert(`Successfully claimed ${reward.amount} $CC tokens!\nTransaction: ${claimResponse.transactionHash}`);
         setTimeout(() => onClose(), 2000);
       } else {
-        alert(`Failed to claim reward: ${claimResponse.error}`);
+        throw new Error(claimResponse.error || 'Failed to claim reward');
       }
     } catch (error) {
       console.error('Failed to claim reward:', error);
-      alert(`Failed to claim reward: ${(error as Error).message}`);
+      const errorMessage = (error as Error).message;
+
+      if (errorMessage.includes('user rejected')) {
+        alert('Transaction was cancelled. You can claim your tokens anytime.');
+      } else if (errorMessage.includes('insufficient funds')) {
+        alert('Insufficient funds for gas fees. Please add some ETH to your wallet.');
+      } else if (errorMessage.includes('Insufficient contract balance') || errorMessage.includes('Insufficient tokens in reward pool')) {
+        alert('Not enough tokens in the reward pool. Please try again later.');
+      } else if (errorMessage.includes('already been claimed') || errorMessage.includes('Nonce already used')) {
+        alert('This reward has already been claimed.');
+      } else {
+        alert(`Failed to claim reward: ${errorMessage}`);
+      }
     } finally {
       setIsClaiming(false);
     }
@@ -125,8 +143,13 @@ const RewardClaimedModal: React.FC<RewardClaimedModalProps> = ({
             You won {reward.label}!
           </p>
           {reward.type === 'onChainToken' && (
-            <p className="text-sm text-[#333333] opacity-70">
-              {claimed ? 'Tokens claimed!' : 'Click "Claim Tokens" to add them to your wallet'}
+            <p className="text-sm text-[#333333] opacity-70 mb-2">
+              {claimed ? 'Tokens claimed!' : 'Click "Claim Tokens" below to receive them in your wallet'}
+            </p>
+          )}
+          {reward.type === 'onChainToken' && !claimed && (
+            <p className="text-xs text-[#E86A5D] font-bold bg-yellow-100 px-3 py-2 rounded-lg border-2 border-[#E86A5D]">
+              Note: You will need to sign ONE transaction to claim your tokens
             </p>
           )}
           {reward.type === 'inGameCurrency' && (
@@ -149,11 +172,11 @@ const RewardClaimedModal: React.FC<RewardClaimedModalProps> = ({
                          flex items-center justify-center space-x-2"
             >
               <Coins size={20} />
-              <span>{isClaiming ? 'Claiming...' : 'Claim Tokens'}</span>
+              <span>{isClaiming ? 'Claiming...' : 'Claim Tokens (Sign Transaction)'}</span>
             </button>
           )}
-          
-          {reward.type === 'onChainToken' && (
+
+          {reward.type === 'onChainToken' && !claimed && (
             <button
               onClick={handleShareOnFarcaster}
               className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white text-lg font-black py-3 px-6

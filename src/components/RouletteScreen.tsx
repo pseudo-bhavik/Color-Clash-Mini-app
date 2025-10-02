@@ -1,9 +1,7 @@
 import React, { useState } from 'react';
 import { ArrowLeft, RotateCcw, Coins } from 'lucide-react';
-import { ROULETTE_REWARDS, CONTRACT_ADDRESSES, CONTRACT_ABIS } from '../config/gameConfig';
+import { ROULETTE_REWARDS } from '../config/gameConfig';
 import { RouletteReward } from '../types/game';
-import { getClaimSignature, claimRewardOnChain } from '../services/blockchainService';
-import { useWallet } from '../hooks/useWallet';
 
 interface ToastFunctions {
   success: (message: string) => void;
@@ -33,12 +31,9 @@ const RouletteScreen: React.FC<RouletteScreenProps> = ({
   onUpdateLeaderboard,
   username,
   farcasterFid,
-  showToast,
 }) => {
   const [isSpinning, setIsSpinning] = useState(false);
   const [rotation, setRotation] = useState(0);
-  const [lastWin, setLastWin] = useState<RouletteReward | null>(null);
-  const { signer } = useWallet();
 
   const getRandomReward = (): RouletteReward => {
     const random = Math.random();
@@ -54,67 +49,6 @@ const RouletteScreen: React.FC<RouletteScreenProps> = ({
     return ROULETTE_REWARDS[ROULETTE_REWARDS.length - 1];
   };
 
-  const handleClaimReward = async (rewardAmount: number) => {
-    if (!walletAddress) {
-      showToast.error('Please connect your wallet first');
-      return;
-    }
-
-    if (!signer) {
-      showToast.error('Wallet connection error. Please reconnect your wallet.');
-      return;
-    }
-
-    try {
-      const playerName = username || walletAddress.slice(0, 8);
-      showToast.info('Getting claim authorization...');
-
-      // First, get the signature from the backend
-      const signatureResponse = await getClaimSignature({
-        walletAddress,
-        rewardAmount,
-        playerName
-      });
-
-      if (!signatureResponse.success) {
-        throw new Error(signatureResponse.error || 'Failed to get claim authorization');
-      }
-
-      showToast.info('Please confirm the transaction in your wallet...');
-
-      // Then, claim the reward on-chain with user's wallet
-      const claimResponse = await claimRewardOnChain({
-        signer,
-        recipient: walletAddress,
-        amount: rewardAmount,
-        nonce: signatureResponse.nonce!,
-        signature: signatureResponse.signature!,
-        contractAddress: CONTRACT_ADDRESSES.REWARD_DISTRIBUTOR
-      });
-
-      if (claimResponse.success) {
-        showToast.success(`Successfully claimed ${rewardAmount} $CC tokens!`);
-        console.log('Reward claimed:', claimResponse);
-      } else {
-        throw new Error(claimResponse.error || 'Failed to claim reward');
-      }
-    } catch (error) {
-      console.error('Failed to claim reward:', error);
-      const errorMessage = (error as Error).message;
-
-      if (errorMessage.includes('user rejected')) {
-        showToast.warning('Transaction was cancelled by user.');
-      } else if (errorMessage.includes('insufficient funds')) {
-        showToast.error('Insufficient funds for gas fees.');
-      } else if (errorMessage.includes('Insufficient contract balance') || errorMessage.includes('Insufficient tokens in reward pool')) {
-        showToast.error('Not enough tokens in the reward pool. Please try again later.');
-      } else if (errorMessage.includes('already been claimed')) {
-        showToast.error('This reward has already been claimed.');
-      } else {
-        showToast.error(`Failed to claim reward: ${errorMessage}`);
-      }
-    }
-  };
 
   const handleSpin = () => {
     if (rouletteKeys === 0 || isSpinning) return;
@@ -124,7 +58,6 @@ const RouletteScreen: React.FC<RouletteScreenProps> = ({
 
     // Calculate winning segment
     const winningReward = getRandomReward();
-    setLastWin(winningReward);
     const segmentIndex = ROULETTE_REWARDS.findIndex(r => r.label === winningReward.label);
     const segmentAngle = 360 / ROULETTE_REWARDS.length;
     const targetAngle = segmentIndex * segmentAngle + (segmentAngle / 2);
@@ -134,18 +67,17 @@ const RouletteScreen: React.FC<RouletteScreenProps> = ({
     setRotation(totalRotation);
 
     // Complete spin after animation
-    setTimeout(async () => {
+    setTimeout(() => {
       setIsSpinning(false);
 
+      // Update leaderboard for token wins
       if (winningReward.type === 'onChainToken' && winningReward.amount > 0) {
-        if (walletAddress) {
-          await handleClaimReward(winningReward.amount);
-        }
         if (walletAddress && onUpdateLeaderboard) {
           onUpdateLeaderboard(walletAddress, winningReward.amount, username, farcasterFid);
         }
       }
 
+      // Show reward modal - claiming will happen there
       onResult(winningReward);
     }, 4000);
   };
@@ -255,12 +187,13 @@ const RouletteScreen: React.FC<RouletteScreenProps> = ({
                       transform: `translateX(-50%) rotate(-${startAngle}deg)`,
                       transformOrigin: 'center',
                       width: 'auto',
-                      fontSize: '14px',
-                      textShadow: '1px 1px 3px rgba(0,0,0,0.9), -1px -1px 3px rgba(0,0,0,0.9)'
+                      fontSize: '16px',
+                      textShadow: '2px 2px 4px rgba(0,0,0,1), -1px -1px 4px rgba(0,0,0,1), 0 0 8px rgba(0,0,0,0.8)'
                     }}
                   >
-                    <div className="bg-black/60 rounded-md px-2 py-1 backdrop-blur-sm
-                                   border border-white/40 shadow-lg whitespace-nowrap">
+                    <div className="bg-black/80 rounded-md px-3 py-1.5 backdrop-blur-sm
+                                   border-2 border-white/60 shadow-2xl whitespace-nowrap
+                                   ring-2 ring-black/50">
                       {reward.label}
                     </div>
                   </div>

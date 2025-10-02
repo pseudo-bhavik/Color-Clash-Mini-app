@@ -1,5 +1,5 @@
 import sdk from '@farcaster/miniapp-sdk';
-
+// hello world
 export const initializeFarcasterSdk = async (): Promise<boolean> => {
   try {
     if (typeof window === 'undefined') {

@@ -82,8 +82,8 @@ function AppContent() {
       success('Welcome! You are now signed in.');
     } catch (err) {
       console.error('Authentication failed:', err);
-      const error = err as Error;
-      const errorMessage = error.message || 'Authentication failed';
+      const authError = err as Error;
+      const errorMessage = authError.message || 'Authentication failed';
 
       if (errorMessage.includes('user rejected') || errorMessage.includes('User denied')) {
         warning('Sign in cancelled.');

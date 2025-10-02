@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAccount, useConnect, useDisconnect, useWalletClient } from 'wagmi';
 import { ethers } from 'ethers';
-import { arbitrum } from '@wagmi/core/chains';
+import { base } from '@wagmi/core/chains';
 import { useAuth } from './useAuth';
 import { neynarService } from '../services/neynarService';
 import { getFarcasterContext } from '../lib/farcasterSdk';
@@ -95,30 +95,30 @@ export const useWallet = () => {
         await connect({ connector: farcasterConnector });
       }
 
-      if (chainId && chainId !== arbitrum.id) {
-        console.log(`Wrong network detected. Current: ${chainId}, Expected: ${arbitrum.id}`);
+      if (chainId && chainId !== base.id) {
+        console.log(`Wrong network detected. Current: ${chainId}, Expected: ${base.id}`);
         if (typeof window !== 'undefined' && window.ethereum) {
           try {
-            console.log('Requesting network switch to Arbitrum...');
+            console.log('Requesting network switch to Base...');
             await window.ethereum.request({
               method: 'wallet_switchEthereumChain',
-              params: [{ chainId: `0x${arbitrum.id.toString(16)}` }],
+              params: [{ chainId: `0x${base.id.toString(16)}` }],
             });
             console.log('Network switch successful');
           } catch (switchError: any) {
             if (switchError.code === 4902) {
-              console.log('Adding Arbitrum network to wallet...');
+              console.log('Adding Base network to wallet...');
               await window.ethereum.request({
                 method: 'wallet_addEthereumChain',
                 params: [{
-                  chainId: `0x${arbitrum.id.toString(16)}`,
-                  chainName: arbitrum.name,
-                  nativeCurrency: arbitrum.nativeCurrency,
-                  rpcUrls: ['https://arb1.arbitrum.io/rpc'],
-                  blockExplorerUrls: ['https://arbiscan.io/'],
+                  chainId: `0x${base.id.toString(16)}`,
+                  chainName: base.name,
+                  nativeCurrency: base.nativeCurrency,
+                  rpcUrls: ['https://mainnet.base.org'],
+                  blockExplorerUrls: ['https://basescan.org/'],
                 }],
               });
-              console.log('Arbitrum network added successfully');
+              console.log('Base network added successfully');
             } else {
               console.error('Network switch failed:', switchError);
               throw switchError;

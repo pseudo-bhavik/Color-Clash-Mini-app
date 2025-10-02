@@ -57,6 +57,42 @@ export interface ClaimRewardResponse {
   details?: string;
 }
 
+// Helper function to detect if we're using Farcaster wallet
+function isFarcasterWallet(provider: any): boolean {
+  try {
+    // Check if it's a Farcaster wallet by looking at the provider type
+    const providerString = provider?.toString() || '';
+    const hasEthersProvider = provider?.constructor?.name === 'BrowserProvider';
+    const transport = provider?._transport || provider?.transport;
+    const transportUrl = transport?.url || '';
+
+    // Check for Farcaster-specific indicators
+    const isFarcaster =
+      providerString.includes('farcaster') ||
+      transportUrl.includes('farcaster') ||
+      (typeof window !== 'undefined' &&
+       ((window as any).sdk?.context ||
+        window.farcaster ||
+        window.parent !== window));
+
+    console.log('Farcaster wallet detection:', {
+      isFarcaster,
+      providerString,
+      hasEthersProvider,
+      transportUrl,
+      hasSdk: !!(window as any).sdk,
+      hasFarcasterGlobal: !!window.farcaster,
+      isInFrame: window.parent !== window
+    });
+
+    return isFarcaster;
+  } catch (e) {
+    console.warn('Error detecting Farcaster wallet:', e);
+    // If in doubt and we see any frame indicators, assume it's Farcaster
+    return typeof window !== 'undefined' && window.parent !== window;
+  }
+}
+
 export async function recordScoreOnChain(
   request: RecordScoreRequest
 ): Promise<RecordScoreResponse> {
@@ -102,6 +138,11 @@ export async function recordScoreOnChain(
       playerName
     });
 
+    // Detect if we're using Farcaster wallet BEFORE making any calls
+    const provider = signer.provider;
+    const isFarcaster = isFarcasterWallet(provider);
+    console.log('Using Farcaster wallet:', isFarcaster);
+
     // Create contract instance with user's signer
     const contract = new ethers.Contract(
       contractAddress,
@@ -109,61 +150,40 @@ export async function recordScoreOnChain(
       signer
     );
 
-    // Fetch current recording fee from contract
+    // Fetch current recording fee from contract (skip for Farcaster)
     let feeInWei: bigint;
-    try {
-      feeInWei = await contract.getRecordingFee();
-      console.log('Recording fee from contract:', ethers.formatEther(feeInWei), 'ETH');
-    } catch (feeError: any) {
-      console.error('Failed to fetch recording fee:', feeError);
+    if (isFarcaster) {
+      console.log('Farcaster wallet detected - using default fee of 0.0001 ETH');
+      feeInWei = ethers.parseEther('0.0001');
+    } else {
+      try {
+        feeInWei = await contract.getRecordingFee();
+        console.log('Recording fee from contract:', ethers.formatEther(feeInWei), 'ETH');
+      } catch (feeError: any) {
+        console.error('Failed to fetch recording fee:', feeError);
 
-      // Check if it's a Farcaster wallet limitation
-      if (feeError?.message?.includes('eth_call') ||
-          feeError?.message?.includes('does not support the requested method')) {
-        console.log('Farcaster wallet detected - using default fee of 0.0001 ETH');
+        // Fallback to default if any error occurs
+        console.log('Using default fee of 0.0001 ETH as fallback');
         feeInWei = ethers.parseEther('0.0001');
-      } else {
-        return {
-          success: false,
-          error: 'Failed to fetch recording fee from contract',
-          details: feeError instanceof Error ? feeError.message : String(feeError)
-        };
       }
     }
 
-    // Skip gas estimation for Farcaster wallet as it may not support eth_call
-    const provider = signer.provider;
-    let shouldSkipEstimation = false;
-
-    try {
-      // Try to check if we're dealing with Farcaster wallet
-      const providerInfo = await provider?.getNetwork();
-      console.log('Provider network:', providerInfo);
-    } catch (e) {
-      console.log('Could not fetch provider network, proceeding with caution');
-    }
-
-    // Attempt gas estimation, but don't fail if it doesn't work
-    try {
-      const gasEstimate = await contract.recordScore.estimateGas(score, playerName, { value: feeInWei });
-      console.log('Estimated gas:', gasEstimate.toString());
-    } catch (estimateError: any) {
-      console.warn('Gas estimation failed (this is OK for Farcaster wallet):', estimateError?.message);
-
-      // If it's an eth_call error, we'll proceed anyway
-      if (estimateError?.message?.includes('eth_call') ||
-          estimateError?.message?.includes('does not support the requested method')) {
-        console.log('Farcaster wallet detected - skipping gas estimation');
-        shouldSkipEstimation = true;
-      } else {
-        // For other errors, still fail
-        console.error('Gas estimation failed with non-Farcaster error:', estimateError);
+    // Skip gas estimation for Farcaster wallet
+    if (!isFarcaster) {
+      try {
+        const gasEstimate = await contract.recordScore.estimateGas(score, playerName, { value: feeInWei });
+        console.log('Estimated gas:', gasEstimate.toString());
+      } catch (estimateError: any) {
+        console.error('Gas estimation failed:', estimateError?.message);
+        // For non-Farcaster wallets, this might indicate a real problem
         return {
           success: false,
           error: 'Transaction would fail - contract may not be deployed or configured correctly',
           details: estimateError instanceof Error ? estimateError.message : String(estimateError)
         };
       }
+    } else {
+      console.log('Skipping gas estimation for Farcaster wallet');
     }
 
     // Send transaction with ETH fee (user pays gas + fee)
@@ -172,7 +192,7 @@ export async function recordScoreOnChain(
       value: feeInWei
     };
 
-    if (shouldSkipEstimation) {
+    if (isFarcaster) {
       console.log('Adding explicit gas parameters for Farcaster wallet');
       txParams.gasLimit = 200000; // Reasonable default for recordScore transaction
     }
@@ -270,6 +290,11 @@ export async function claimRewardOnChain(
       };
     }
 
+    // Detect if we're using Farcaster wallet BEFORE making any calls
+    const provider = signer.provider;
+    const isFarcaster = isFarcasterWallet(provider);
+    console.log('Using Farcaster wallet for claim:', isFarcaster);
+
     // Create contract instance with user's signer
     const contract = new ethers.Contract(
       contractAddress,
@@ -278,46 +303,40 @@ export async function claimRewardOnChain(
     );
 
     // Check if nonce is already used (skip for Farcaster wallet)
-    let isUsed = false;
-    try {
-      isUsed = await contract.isNonceUsed(recipient, amount, nonce);
-      if (isUsed) {
-        return {
-          success: false,
-          error: 'This reward has already been claimed'
-        };
+    if (!isFarcaster) {
+      try {
+        const isUsed = await contract.isNonceUsed(recipient, amount, nonce);
+        if (isUsed) {
+          return {
+            success: false,
+            error: 'This reward has already been claimed'
+          };
+        }
+      } catch (nonceError: any) {
+        console.error('Could not check nonce:', nonceError?.message);
+        // Let the transaction proceed and let the contract revert if needed
       }
-    } catch (nonceError: any) {
-      console.warn('Could not check nonce (this is OK for Farcaster wallet):', nonceError?.message);
-
-      // For Farcaster wallet, we'll skip the nonce check and let the contract handle it
-      if (!nonceError?.message?.includes('eth_call') &&
-          !nonceError?.message?.includes('does not support the requested method')) {
-        // If it's not a Farcaster wallet issue, throw the error
-        throw nonceError;
-      }
-      console.log('Farcaster wallet detected - proceeding without nonce check');
+    } else {
+      console.log('Skipping nonce check for Farcaster wallet');
     }
 
-    // Estimate gas for claim transaction (optional for Farcaster)
-    let shouldSkipEstimation = false;
-    try {
-      const gasEstimate = await contract.claimRewardWithSignature.estimateGas(recipient, amount, nonce, signature);
-      console.log('Estimated gas for claim:', gasEstimate.toString());
-    } catch (estimateError: any) {
-      console.warn('Gas estimation failed (this is OK for Farcaster wallet):', estimateError?.message);
-
-      if (estimateError?.message?.includes('eth_call') ||
-          estimateError?.message?.includes('does not support the requested method')) {
-        console.log('Farcaster wallet detected - skipping gas estimation for claim');
-        shouldSkipEstimation = true;
+    // Estimate gas for claim transaction (skip for Farcaster)
+    if (!isFarcaster) {
+      try {
+        const gasEstimate = await contract.claimRewardWithSignature.estimateGas(recipient, amount, nonce, signature);
+        console.log('Estimated gas for claim:', gasEstimate.toString());
+      } catch (estimateError: any) {
+        console.error('Gas estimation failed for claim:', estimateError?.message);
+        // Let it proceed anyway
       }
+    } else {
+      console.log('Skipping gas estimation for Farcaster wallet claim');
     }
 
     // Send transaction (user pays gas)
     const txParams: any = {};
 
-    if (shouldSkipEstimation) {
+    if (isFarcaster) {
       console.log('Adding explicit gas parameters for Farcaster wallet claim');
       txParams.gasLimit = 250000; // Reasonable default for claim transaction
     }

@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { X, Zap, Bomb, Maximize2 } from 'lucide-react';
-import { GameResult, PowerUp, GameSettings } from '../types/game';
+import { GameResult, PowerUp } from '../types/game';
 import { GAME_SETTINGS } from '../config/gameConfig';
 import { usePaintCanvas } from '../hooks/usePaintCanvas';
 import { useBotAI } from '../hooks/useBotAI';

@@ -99,7 +99,7 @@ const PostGameScreen: React.FC<PostGameScreenProps> = ({
       if (errorMessage.includes('user rejected')) {
         showToast.warning('Transaction was cancelled by user.');
       } else if (errorMessage.includes('insufficient funds')) {
-        showToast.error('Insufficient funds for gas fees.');
+        showToast.error('Insufficient funds to complete transaction.');
       } else {
         showToast.error(`Failed to record score: ${errorMessage}`);
       }
@@ -163,7 +163,7 @@ const PostGameScreen: React.FC<PostGameScreenProps> = ({
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer" />
             )}
             <Rocket size={24} className={isRecording ? 'animate-pulse' : ''} />
-            <span>{isRecording ? 'IMMORTALIZING...' : 'IMMORTALIZE YOUR SCORE'}</span>
+            <span>{isRecording ? 'IMMORTALIZING...' : 'IMMORTALIZE'}</span>
           </button>
         )}
 

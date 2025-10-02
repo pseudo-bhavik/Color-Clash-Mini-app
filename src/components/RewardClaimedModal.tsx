@@ -106,7 +106,7 @@ const RewardClaimedModal: React.FC<RewardClaimedModalProps> = ({
       if (errorMessage.includes('user rejected')) {
         alert('Transaction was cancelled. You can claim your tokens anytime.');
       } else if (errorMessage.includes('insufficient funds')) {
-        alert('Insufficient funds for gas fees. Please add some ETH to your wallet.');
+        alert('Insufficient funds to complete transaction.');
       } else if (errorMessage.includes('Insufficient contract balance') || errorMessage.includes('Insufficient tokens in reward pool')) {
         alert('Not enough tokens in the reward pool. Please try again later.');
       } else if (errorMessage.includes('already been claimed') || errorMessage.includes('Nonce already used')) {

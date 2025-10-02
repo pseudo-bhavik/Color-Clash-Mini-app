@@ -109,9 +109,23 @@ export async function recordScoreOnChain(
       signer
     );
 
+    // Fetch current recording fee from contract
+    let feeInWei: bigint;
+    try {
+      feeInWei = await contract.getRecordingFee();
+      console.log('Recording fee from contract:', ethers.formatEther(feeInWei), 'ETH');
+    } catch (feeError) {
+      console.error('Failed to fetch recording fee:', feeError);
+      return {
+        success: false,
+        error: 'Failed to fetch recording fee from contract',
+        details: feeError instanceof Error ? feeError.message : String(feeError)
+      };
+    }
+
     // Estimate gas before sending transaction
     try {
-      const gasEstimate = await contract.recordScore.estimateGas(score, playerName);
+      const gasEstimate = await contract.recordScore.estimateGas(score, playerName, { value: feeInWei });
       console.log('Estimated gas:', gasEstimate.toString());
     } catch (estimateError) {
       console.error('Gas estimation failed:', estimateError);
@@ -122,9 +136,11 @@ export async function recordScoreOnChain(
       };
     }
 
-    // Send transaction (user pays gas)
-    const tx = await contract.recordScore(score, playerName);
-    console.log('Transaction sent:', tx.hash);
+    // Send transaction with ETH fee (user pays gas + fee)
+    const tx = await contract.recordScore(score, playerName, {
+      value: feeInWei
+    });
+    console.log('Transaction sent:', tx.hash, 'with fee:', ethers.formatEther(feeInWei), 'ETH');
 
     const receipt = await tx.wait();
     console.log('Transaction confirmed:', receipt.hash, 'Block:', receipt.blockNumber);

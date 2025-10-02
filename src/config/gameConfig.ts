@@ -26,6 +26,10 @@ export const ROULETTE_REWARDS: RouletteReward[] = [
   { type: 'noReward', amount: 0, label: 'Try Again', probability: 0.05 },
 ];
 
+// NOTE: Recording fee is now fetched dynamically from the contract
+// The contract owner can change the fee using setRecordingFee()
+// No need for environment variable configuration
+
 // Contract addresses - update these with your deployed contract addresses
 export const CONTRACT_ADDRESSES = {
   CC_TOKEN: import.meta.env.VITE_CC_TOKEN_ADDRESS || '0x1234567890123456789012345678901234567890',
@@ -94,13 +98,26 @@ export const CONTRACT_ABIS = {
   REWARD_DISTRIBUTOR: [
     "function distributeReward(address recipient, string memory playerName, uint256 amount) external",
     "function claimRewardWithSignature(address recipient, uint256 amount, uint256 nonce, bytes memory signature) external",
+    "function withdrawTokens(uint256 amount) external",
     "function getContractBalance() external view returns (uint256)",
     "function isNonceUsed(address recipient, uint256 amount, uint256 nonce) external view returns (bool)",
-    "event RewardDistributed(address indexed recipient, string playerName, uint256 amount)"
+    "function pause() external",
+    "function unpause() external",
+    "event RewardDistributed(address indexed recipient, string playerName, uint256 amount)",
+    "event EmergencyWithdrawal(address indexed owner, uint256 amount)"
   ],
   SCORE_RECORDER: [
-    "function recordScore(uint256 score, string memory playerName) external",
-    "event ScoreRecorded(address indexed player, string playerName, uint256 score, uint256 timestamp, uint256 gameNumber)"
+    "function recordScore(uint256 score, string memory playerName) external payable",
+    "function setRecordingFee(uint256 newFee) external",
+    "function withdrawFunds() external",
+    "function withdrawAmount(uint256 amount) external",
+    "function getContractBalance() external view returns (uint256)",
+    "function getRecordingFee() external view returns (uint256)",
+    "function pause() external",
+    "function unpause() external",
+    "event ScoreRecorded(address indexed player, string playerName, uint256 score, uint256 timestamp, uint256 gameNumber)",
+    "event FeeUpdated(uint256 oldFee, uint256 newFee)",
+    "event FundsWithdrawn(address indexed owner, uint256 amount)"
   ],
   ERC20: [
     "function balanceOf(address owner) view returns (uint256)",

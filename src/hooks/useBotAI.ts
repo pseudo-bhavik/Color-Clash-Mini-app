@@ -28,7 +28,6 @@ export const useBotAI = (
     enlarge: false
   });
   
-  const directionRef = useRef({ dx: 0, dy: 0 });
   const targetRef = useRef<{x: number, y: number} | null>(null);
   const lastDirectionChangeRef = useRef(0);
   const behaviorModeRef = useRef<'exploring' | 'targeting' | 'aggressive' | 'defensive'>('exploring');

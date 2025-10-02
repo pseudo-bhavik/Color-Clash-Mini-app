@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useAccount, useConnect, useDisconnect, usePublicClient, useWalletClient } from 'wagmi';
+import { useAccount, useConnect, useDisconnect, useWalletClient } from 'wagmi';
 import { ethers } from 'ethers';
 import { arbitrum } from '@wagmi/core/chains';
 import { useAuth } from './useAuth';
@@ -17,7 +17,6 @@ export const useWallet = () => {
   const { address, isConnected, chainId } = useAccount();
   const { connect, connectors } = useConnect();
   const { disconnect } = useDisconnect();
-  const publicClient = usePublicClient();
   const { data: walletClient } = useWalletClient();
 
   const [provider, setProvider] = useState<ethers.BrowserProvider | null>(null);

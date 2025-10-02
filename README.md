@@ -1,7 +1,7 @@
 # Color Clash - Farcaster Mini-App
 
 A competitive painting game where players battle against an AI bot to cover the most canvas area within 15 seconds. Built as a Farcaster Mini-App with blockchain integration and token rewards.
-
+//hellooooo
 ## 🎮 Game Features
 
 ### Core Gameplay

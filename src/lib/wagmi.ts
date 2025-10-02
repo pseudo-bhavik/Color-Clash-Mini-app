@@ -6,9 +6,7 @@ import { injected } from '@wagmi/connectors';
 export const wagmiConfig = createConfig({
   chains: [baseSepolia],
   connectors: [
-    farcasterMiniApp({
-      relay: 'https://relay.farcaster.xyz',
-    }),
+    farcasterMiniApp(),
     injected()
   ],
   transports: {

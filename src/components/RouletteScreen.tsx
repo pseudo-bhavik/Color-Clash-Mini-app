@@ -178,15 +178,15 @@ const RouletteScreen: React.FC<RouletteScreenProps> = ({
                     boxShadow: 'inset 0 0 10px rgba(0,0,0,0.2)'
                   }}
                 >
-                  {/* Reward text positioned radially */}
+                  {/* Reward text positioned at segment base */}
                   <div
                     className="absolute font-black leading-tight text-center"
                     style={{
-                      top: '35%',
+                      bottom: '15%',
                       left: '50%',
-                      transform: `translate(-50%, -50%) rotate(${segmentAngle / 2}deg)`,
+                      transform: `translate(-50%, 0) rotate(-${startAngle + segmentAngle / 2}deg)`,
                       transformOrigin: '50% 50%',
-                      fontSize: '14px',
+                      fontSize: '13px',
                       fontWeight: '900',
                       color: '#FFFFFF',
                       textShadow: `
@@ -198,7 +198,8 @@ const RouletteScreen: React.FC<RouletteScreenProps> = ({
                         -2px 2px 2px rgba(0,0,0,0.9)
                       `,
                       WebkitTextStroke: '1px rgba(0,0,0,0.8)',
-                      whiteSpace: 'pre-line'
+                      whiteSpace: 'pre-line',
+                      width: '60px'
                     }}
                   >
                     {reward.label.includes('$CC')

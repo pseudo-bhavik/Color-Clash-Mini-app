@@ -41,8 +41,8 @@ export const getFarcasterContext = () => {
       user = windowSdk.context.user;
     } else if (window.farcaster?.user) {
       user = window.farcaster.user;
-    } else if (sdk.context?.user) {
-      user = sdk.context.user;
+    } else if ('context' in sdk && (sdk as any).context?.user) {
+      user = (sdk as any).context.user;
     }
 
     if (!user) return null;

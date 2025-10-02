@@ -180,17 +180,14 @@ const RouletteScreen: React.FC<RouletteScreenProps> = ({
                 >
                   {/* Reward text positioned radially */}
                   <div
-                    className="absolute font-black leading-none"
+                    className="absolute font-black leading-tight text-center"
                     style={{
-                      top: '25%',
+                      top: '35%',
                       left: '50%',
                       transform: `translate(-50%, -50%) rotate(${segmentAngle / 2}deg)`,
                       transformOrigin: '50% 50%',
-                      writingMode: 'vertical-rl',
-                      textOrientation: 'upright',
-                      fontSize: '16px',
+                      fontSize: '14px',
                       fontWeight: '900',
-                      letterSpacing: '-1px',
                       color: '#FFFFFF',
                       textShadow: `
                         0 0 4px rgba(0,0,0,1),
@@ -200,10 +197,18 @@ const RouletteScreen: React.FC<RouletteScreenProps> = ({
                         2px -2px 2px rgba(0,0,0,0.9),
                         -2px 2px 2px rgba(0,0,0,0.9)
                       `,
-                      WebkitTextStroke: '1px rgba(0,0,0,0.8)'
+                      WebkitTextStroke: '1px rgba(0,0,0,0.8)',
+                      whiteSpace: 'pre-line'
                     }}
                   >
-                    {reward.label}
+                    {reward.label.includes('$CC')
+                      ? reward.label.replace(' $CC', '\n$CC')
+                      : reward.label.includes('Keys')
+                      ? reward.label.replace(' Keys', '\nKeys')
+                      : reward.label.includes('Try')
+                      ? 'Try\nAgain'
+                      : reward.label
+                    }
                   </div>
                   
                   {/* Shine effect */}

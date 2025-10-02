@@ -84,8 +84,9 @@ const RewardClaimedModal: React.FC<RewardClaimedModalProps> = ({
 
       console.log('Please confirm the transaction in your wallet...');
 
-      // Convert amount to wei (token has 18 decimals)
-      const amountInWei = ethers.parseUnits(reward.amount.toString(), 18);
+      // The edge function already converted the amount to wei and signed it
+      // Use the amount from the signature response
+      const amountInWei = BigInt(signatureResponse.rewardAmount!);
 
       const claimResponse = await claimRewardOnChain({
         signer,

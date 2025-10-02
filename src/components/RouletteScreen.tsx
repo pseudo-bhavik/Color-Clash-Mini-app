@@ -123,19 +123,19 @@ const RouletteScreen: React.FC<RouletteScreenProps> = ({
       {/* Roulette Wheel */}
       <div className="relative mb-12">
         {/* Pointer */}
-        <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-6 z-20">
+        <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-8 z-20">
           {/* 3D Flipper/Pointer */}
           <div className="relative">
-            <div className="w-0 h-0 border-l-8 border-r-8 border-t-16 
-                           border-l-transparent border-r-transparent border-t-[#333333] 
+            <div className="w-0 h-0 border-l-[16px] border-r-[16px] border-t-[32px]
+                           border-l-transparent border-r-transparent border-t-[#333333]
                            drop-shadow-2xl"></div>
             {/* 3D highlight */}
             <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1
-                           w-0 h-0 border-l-6 border-r-6 border-t-12 
+                           w-0 h-0 border-l-[12px] border-r-[12px] border-t-[24px]
                            border-l-transparent border-r-transparent border-t-gray-600"></div>
             {/* Shine effect */}
             <div className="absolute top-0 left-1/4 transform -translate-y-1
-                           w-0 h-0 border-l-2 border-r-2 border-t-8 
+                           w-0 h-0 border-l-[4px] border-r-[4px] border-t-[16px]
                            border-l-transparent border-r-transparent border-t-white/40"></div>
           </div>
         </div>
@@ -178,22 +178,25 @@ const RouletteScreen: React.FC<RouletteScreenProps> = ({
                     boxShadow: 'inset 0 0 10px rgba(0,0,0,0.2)'
                   }}
                 >
-                  {/* Reward text positioned correctly */}
+                  {/* Reward text positioned radially */}
                   <div
-                    className="absolute text-white font-black text-center leading-none"
+                    className="absolute text-white font-black leading-tight"
                     style={{
-                      top: '20%',
+                      top: '25%',
                       left: '50%',
-                      transform: `translateX(-50%) rotate(-${startAngle}deg)`,
-                      transformOrigin: 'center',
-                      width: 'auto',
-                      fontSize: '16px',
-                      textShadow: '2px 2px 4px rgba(0,0,0,1), -1px -1px 4px rgba(0,0,0,1), 0 0 8px rgba(0,0,0,0.8)'
+                      transform: `translate(-50%, -50%) rotate(${segmentAngle / 2}deg)`,
+                      transformOrigin: '50% 50%',
+                      writingMode: 'vertical-rl',
+                      textOrientation: 'mixed',
+                      fontSize: '18px',
+                      fontWeight: '900',
+                      letterSpacing: '1px',
+                      textShadow: '3px 3px 6px rgba(0,0,0,1), -2px -2px 6px rgba(0,0,0,1), 0 0 10px rgba(0,0,0,0.9), 0 0 15px rgba(0,0,0,0.7)'
                     }}
                   >
-                    <div className="bg-black/80 rounded-md px-3 py-1.5 backdrop-blur-sm
-                                   border-2 border-white/60 shadow-2xl whitespace-nowrap
-                                   ring-2 ring-black/50">
+                    <div className="bg-black/90 rounded-lg px-2 py-3 backdrop-blur-md
+                                   border-2 border-white/70 shadow-2xl
+                                   ring-2 ring-black/60">
                       {reward.label}
                     </div>
                   </div>

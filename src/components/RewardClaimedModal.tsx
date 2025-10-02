@@ -9,12 +9,16 @@ interface RewardClaimedModalProps {
   reward: {amount: number; label: string; type: string};
   onClose: () => void;
   walletAddress?: string;
+  onSpinAgain?: () => void;
+  hasMoreKeys?: boolean;
 }
 
 const RewardClaimedModal: React.FC<RewardClaimedModalProps> = ({
   reward,
   onClose,
-  walletAddress
+  walletAddress,
+  onSpinAgain,
+  hasMoreKeys
 }) => {
   const { moderateContent } = useModeration();
   const [isClaiming, setIsClaiming] = useState(false);
@@ -92,7 +96,6 @@ const RewardClaimedModal: React.FC<RewardClaimedModalProps> = ({
       if (claimResponse.success) {
         setClaimed(true);
         alert(`Successfully claimed ${reward.amount} $CC tokens!\nTransaction: ${claimResponse.transactionHash}`);
-        setTimeout(() => onClose(), 2000);
       } else {
         throw new Error(claimResponse.error || 'Failed to claim reward');
       }
@@ -147,11 +150,6 @@ const RewardClaimedModal: React.FC<RewardClaimedModalProps> = ({
               {claimed ? 'Tokens claimed!' : 'Click "Claim Tokens" below to receive them in your wallet'}
             </p>
           )}
-          {reward.type === 'onChainToken' && !claimed && (
-            <p className="text-xs text-[#E86A5D] font-bold bg-yellow-100 px-3 py-2 rounded-lg border-2 border-[#E86A5D]">
-              Note: You will need to sign ONE transaction to claim your tokens
-            </p>
-          )}
           {reward.type === 'inGameCurrency' && (
             <p className="text-sm text-[#333333] opacity-70">
               Keys added to your account!
@@ -172,7 +170,7 @@ const RewardClaimedModal: React.FC<RewardClaimedModalProps> = ({
                          flex items-center justify-center space-x-2"
             >
               <Coins size={20} />
-              <span>{isClaiming ? 'Claiming...' : 'Claim Tokens (Sign Transaction)'}</span>
+              <span>{isClaiming ? 'Claiming...' : 'Claim Tokens'}</span>
             </button>
           )}
 
@@ -189,9 +187,25 @@ const RewardClaimedModal: React.FC<RewardClaimedModalProps> = ({
             </button>
           )}
 
+          {hasMoreKeys && onSpinAgain && (
+            <button
+              onClick={() => {
+                onClose();
+                onSpinAgain();
+              }}
+              className="w-full bg-gradient-to-r from-yellow-500 to-yellow-600 text-[#333333] text-lg font-black py-3 px-6
+                         rounded-xl border-3 border-[#333333] shadow-lg hover:from-yellow-400 hover:to-yellow-500
+                         active:transform active:scale-95 transition-all duration-200
+                         flex items-center justify-center space-x-2"
+            >
+              <span>🎰</span>
+              <span>Spin Again</span>
+            </button>
+          )}
+
           <button
             onClick={onClose}
-            className="w-full bg-white text-[#333333] text-lg font-black py-3 px-6 
+            className="w-full bg-white text-[#333333] text-lg font-black py-3 px-6
                        rounded-xl border-3 border-[#333333] shadow-lg hover:bg-gray-100
                        active:transform active:scale-95 transition-all duration-200"
           >

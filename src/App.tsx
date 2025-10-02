@@ -227,6 +227,8 @@ function AppContent() {
               reward={claimedReward}
               onClose={handleCloseRewardModal}
               walletAddress={walletAddress}
+              onSpinAgain={handleSpinRoulette}
+              hasMoreKeys={rouletteKeys > 0}
             />
           )}
         </div>

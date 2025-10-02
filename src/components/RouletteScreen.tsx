@@ -1,7 +1,13 @@
 import React, { useState } from 'react';
 import { ArrowLeft, RotateCcw, Coins } from 'lucide-react';
-import { ROULETTE_REWARDS } from '../config/gameConfig';
-import { RouletteReward } from '../types/game';
+
+interface RouletteReward {
+    label: string;
+    probability: number;
+    type: 'onChainToken' | 'inGame' | 'nothing';
+    amount: number;
+}
+
 
 interface ToastFunctions {
   success: (message: string) => void;
@@ -11,6 +17,7 @@ interface ToastFunctions {
 }
 
 interface RouletteScreenProps {
+  rouletteRewards: RouletteReward[]; // Rewards are now passed as a prop
   rouletteKeys: number;
   onSpendKeys: (amount: number) => void;
   onResult: (reward: RouletteReward) => void;
@@ -22,7 +29,18 @@ interface RouletteScreenProps {
   showToast: ToastFunctions;
 }
 
+// Add mock rewards to be used as a fallback
+const mockRewards: RouletteReward[] = [
+    { label: '1K $CC', probability: 0.20, type: 'onChainToken', amount: 1000 },
+    { label: '5K $CC', probability: 0.10, type: 'onChainToken', amount: 5000 },
+    { label: '10K $CC', probability: 0.04, type: 'onChainToken', amount: 10000 },
+    { label: '50K $CC', probability: 0.01, type: 'onChainToken', amount: 50000 },
+    { label: '+2 Keys', probability: 0.25, type: 'inGame', amount: 2 },
+    { label: 'Try Again', probability: 0.40, type: 'nothing', amount: 0 },
+];
+
 const RouletteScreen: React.FC<RouletteScreenProps> = ({
+  rouletteRewards: rewardsFromProps,
   rouletteKeys,
   onSpendKeys,
   onResult,
@@ -35,18 +53,32 @@ const RouletteScreen: React.FC<RouletteScreenProps> = ({
   const [isSpinning, setIsSpinning] = useState(false);
   const [rotation, setRotation] = useState(0);
 
+  // Use rewards from props if available, otherwise use mock data.
+  // This prevents the component from getting stuck on a loading screen.
+  const rouletteRewards = (rewardsFromProps && rewardsFromProps.length > 0) 
+    ? rewardsFromProps 
+    : mockRewards;
+  
+  // Add a console warning for developers when the fallback data is used.
+  React.useEffect(() => {
+      if (!rewardsFromProps || rewardsFromProps.length === 0) {
+        console.warn("RouletteScreen: `rouletteRewards` prop is empty or not provided. Using mock data for display.");
+      }
+  }, [rewardsFromProps]);
+
+
   const getRandomReward = (): RouletteReward => {
     const random = Math.random();
     let cumulativeProbability = 0;
 
-    for (const reward of ROULETTE_REWARDS) {
+    for (const reward of rouletteRewards) {
       cumulativeProbability += reward.probability;
       if (random <= cumulativeProbability) {
         return reward;
       }
     }
-
-    return ROULETTE_REWARDS[ROULETTE_REWARDS.length - 1];
+    // Fallback to the last reward, should be rare
+    return rouletteRewards[rouletteRewards.length - 1];
   };
 
 
@@ -56,28 +88,21 @@ const RouletteScreen: React.FC<RouletteScreenProps> = ({
     setIsSpinning(true);
     onSpendKeys(1);
 
-    // Calculate winning segment
     const winningReward = getRandomReward();
-    const segmentIndex = ROULETTE_REWARDS.findIndex(r => r.label === winningReward.label);
-    const segmentAngle = 360 / ROULETTE_REWARDS.length;
+    const segmentIndex = rouletteRewards.findIndex(r => r.label === winningReward.label);
+    const segmentAngle = 360 / rouletteRewards.length;
     const targetAngle = segmentIndex * segmentAngle + (segmentAngle / 2);
     
-    // Add multiple full rotations for effect
-    const totalRotation = rotation + 2160 + (360 - targetAngle); // Spin clockwise to land on segment
+    const totalRotation = rotation + 2160 + (360 - targetAngle);
     setRotation(totalRotation);
 
-    // Complete spin after animation
     setTimeout(() => {
       setIsSpinning(false);
-
-      // Update leaderboard for token wins
       if (winningReward.type === 'onChainToken' && winningReward.amount > 0) {
         if (walletAddress && onUpdateLeaderboard) {
           onUpdateLeaderboard(walletAddress, winningReward.amount, username, farcasterFid);
         }
       }
-
-      // Show reward modal - claiming will happen there
       onResult(winningReward);
     }, 4000);
   };
@@ -85,25 +110,25 @@ const RouletteScreen: React.FC<RouletteScreenProps> = ({
   const canSpin = rouletteKeys > 0 && !isSpinning;
   const needsWallet = !walletAddress;
 
-  const segmentAngle = 360 / ROULETTE_REWARDS.length;
+  const segmentAngle = 360 / rouletteRewards.length;
 
   return (
-    <div className="h-screen flex flex-col items-center justify-center p-6 relative">
+    <div className="h-screen flex flex-col items-center justify-center p-6 relative bg-[#FDF6E3]">
       {/* Header */}
       <div className="absolute top-6 left-6">
         <button
           onClick={onBack}
           disabled={isSpinning}
-          className="w-12 h-12 bg-white rounded-full border-3 border-[#333333] 
-                     flex items-center justify-center shadow-lg hover:bg-gray-100
-                     disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-12 h-12 bg-white rounded-full border-2 border-[#333333] 
+                       flex items-center justify-center shadow-lg hover:bg-gray-100
+                       disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
         >
           <ArrowLeft size={24} color="#333333" />
         </button>
       </div>
 
       <div className="absolute top-6 right-6">
-        <div className="bg-white rounded-xl px-4 py-2 border-3 border-[#333333] shadow-lg">
+        <div className="bg-white rounded-xl px-4 py-2 border-2 border-[#333333] shadow-lg">
           <p className="text-[#333333] text-lg font-black">
             Keys 🔑: {rouletteKeys}
           </p>
@@ -123,48 +148,36 @@ const RouletteScreen: React.FC<RouletteScreenProps> = ({
       {/* Roulette Wheel */}
       <div className="relative mb-12">
         {/* Pointer */}
-        <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-8 z-20">
-          {/* 3D Flipper/Pointer */}
-          <div className="relative">
-            <div className="w-0 h-0 border-l-[16px] border-r-[16px] border-t-[32px]
-                           border-l-transparent border-r-transparent border-t-[#333333]
-                           drop-shadow-2xl"></div>
-            {/* 3D highlight */}
-            <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1
-                           w-0 h-0 border-l-[12px] border-r-[12px] border-t-[24px]
-                           border-l-transparent border-r-transparent border-t-gray-600"></div>
-            {/* Shine effect */}
-            <div className="absolute top-0 left-1/4 transform -translate-y-1
-                           w-0 h-0 border-l-[4px] border-r-[4px] border-t-[16px]
-                           border-l-transparent border-r-transparent border-t-white/40"></div>
-          </div>
+        <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-6 z-20 drop-shadow-lg">
+           <div className="w-0 h-0 
+             border-l-[15px] border-l-transparent
+             border-r-[15px] border-r-transparent
+             border-t-[30px] border-t-red-600"></div>
+           <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-4 h-4 bg-white rounded-full border-2 border-gray-500" style={{top: '8px'}}></div>
         </div>
 
         {/* Wheel */}
         <div 
-          className="w-80 h-80 rounded-full border-8 border-[#333333] relative overflow-hidden"
+          className="w-80 h-80 rounded-full border-8 border-[#333333] relative overflow-hidden shadow-2xl"
           style={{
             transform: `rotate(${rotation}deg)`,
             transition: isSpinning ? 'transform 4s cubic-bezier(0.25, 0.1, 0.25, 1)' : 'none',
-            background: 'radial-gradient(circle at 30% 30%, #FFD700, #FFA500, #FF8C00)',
-            boxShadow: `
-              0 0 0 4px rgba(255, 215, 0, 0.3),
-              0 20px 40px rgba(0, 0, 0, 0.4),
-              inset 0 0 20px rgba(255, 255, 255, 0.2),
-              inset 0 0 40px rgba(0, 0, 0, 0.1)
-            `
           }}
         >
-          {ROULETTE_REWARDS.map((reward, index) => {
+          {rouletteRewards.map((reward, index) => {
             const startAngle = index * segmentAngle;
             const colors = [
               '#E86A5D', '#3DB4D8', '#10B981', '#F59E0B',
-              '#EF4444', '#8B5CF6', '#FF6B9D', '#00D4AA'
+              '#EF4444', '#8B5CF6'
             ];
 
             const words = reward.label.split(' ');
-            const isSingleWord = words.length === 1;
-            const fontSize = reward.label.length > 4 ? '14px' : '16px';
+            const fontSize = reward.label.length > 8 ? '12px' : reward.label.length > 5 ? '14px' : '16px';
+
+            const segmentAngleRad = (segmentAngle * Math.PI) / 180;
+            const clipPathX = 50 + 50 * Math.sin(segmentAngleRad);
+            const clipPathY = 50 - 50 * Math.cos(segmentAngleRad);
+            const clipPathValue = `polygon(50% 50%, 50% 0, ${clipPathX}% ${clipPathY}%)`;
 
             return (
               <div
@@ -172,53 +185,40 @@ const RouletteScreen: React.FC<RouletteScreenProps> = ({
                 className="absolute w-full h-full origin-center"
                 style={{
                   transform: `rotate(${startAngle}deg)`,
-                  clipPath: `polygon(50% 50%, 50% 0%, ${50 + 50 * Math.cos((segmentAngle * Math.PI) / 180)}% ${50 - 50 * Math.sin((segmentAngle * Math.PI) / 180)}%)`
+                  clipPath: clipPathValue,
                 }}
               >
                 <div
-                  className="w-full h-full relative border-r border-[#333333]/30"
-                  style={{
-                    background: `linear-gradient(135deg, ${colors[index % colors.length]}, ${colors[index % colors.length]}cc)`,
-                    boxShadow: 'inset 0 0 10px rgba(0,0,0,0.2)'
-                  }}
+                  className="w-full h-full relative border-r border-black/10"
+                  style={{ background: colors[index % colors.length] }}
                 >
                   <div
-                    className="absolute font-black pointer-events-none flex flex-col items-center justify-center"
+                    className="absolute w-full h-1/2 top-0 left-0 flex items-start justify-center pointer-events-none"
                     style={{
-                      top: '50%',
-                      left: '50%',
-                      transform: `translate(-50%, -50%) translateY(-95px) rotate(${segmentAngle / 2}deg)`,
-                      fontSize,
-                      fontWeight: '900',
-                      color: '#FFFFFF',
-                      textShadow: `
-                        0 3px 6px rgba(0,0,0,1),
-                        0 0 10px rgba(0,0,0,0.9),
-                        2px 2px 0 rgba(0,0,0,1),
-                        -2px -2px 0 rgba(0,0,0,1),
-                        2px -2px 0 rgba(0,0,0,1),
-                        -2px 2px 0 rgba(0,0,0,1)
-                      `,
-                      WebkitTextStroke: '1.5px rgba(0,0,0,1)',
-                      letterSpacing: '1px',
-                      lineHeight: '1.2',
-                      writingMode: 'vertical-rl',
-                      textOrientation: 'upright'
+                      transformOrigin: '50% 100%',
+                      transform: `rotate(${segmentAngle / 2}deg)`,
                     }}
                   >
-                    {isSingleWord ? (
-                      <span>{reward.label}</span>
-                    ) : (
-                      words.map((word, wordIndex) => (
-                        <span key={wordIndex} style={{ display: 'block' }}>
+                    <div
+                      className="text-center"
+                      style={{
+                        transform: 'translateY(20px)',
+                        fontSize,
+                        fontWeight: '900',
+                        color: '#FFFFFF',
+                        textShadow: '0px 2px 4px rgba(0, 0, 0, 0.5)',
+                        WebkitTextStroke: '1px #333333',
+                        letterSpacing: '0.5px',
+                        lineHeight: '1.1',
+                      }}
+                    >
+                      {words.map((word, wordIndex) => (
+                        <span key={wordIndex} className="block">
                           {word}
                         </span>
-                      ))
-                    )}
+                      ))}
+                    </div>
                   </div>
-
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent
-                                 transform rotate-12"></div>
                 </div>
               </div>
             );
@@ -226,23 +226,15 @@ const RouletteScreen: React.FC<RouletteScreenProps> = ({
           
           {/* Center hub */}
           <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 
-                         w-20 h-20 bg-gradient-to-br from-yellow-400 to-yellow-600 
-                         rounded-full border-6 border-[#333333] z-10
-                         flex items-center justify-center"
-               style={{
-                 boxShadow: `
-                   0 0 20px rgba(255, 215, 0, 0.6),
-                   inset 0 0 10px rgba(255, 255, 255, 0.3),
-                   inset 0 0 20px rgba(0, 0, 0, 0.1)
-                 `
-               }}>
+                           w-20 h-20 bg-gradient-to-br from-yellow-400 to-yellow-600 
+                           rounded-full border-4 border-[#333333] z-10
+                           flex items-center justify-center shadow-inner"
+          >
             <Coins size={32} color="#333333" />
           </div>
         </div>
         
-        {/* Wheel base shadow */}
-        <div className="absolute -bottom-4 left-1/2 transform -translate-x-1/2 
-                       w-72 h-12 bg-black/30 rounded-full blur-lg"></div>
+        <div className="absolute -bottom-4 left-1/2 transform -translate-x-1/2 w-72 h-12 bg-black/20 rounded-full blur-lg"></div>
       </div>
 
       {/* Spin Button */}
@@ -272,12 +264,9 @@ const RouletteScreen: React.FC<RouletteScreenProps> = ({
         </p>
       )}
       
-      {/* Spinning effects */}
       {isSpinning && (
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-            <div className="w-96 h-96 border-4 border-yellow-400 rounded-full animate-ping opacity-75"></div>
-          </div>
+        <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+            <div className="w-96 h-96 border-4 border-yellow-400 rounded-full animate-ping opacity-50"></div>
         </div>
       )}
     </div>
@@ -285,3 +274,5 @@ const RouletteScreen: React.FC<RouletteScreenProps> = ({
 };
 
 export default RouletteScreen;
+
+

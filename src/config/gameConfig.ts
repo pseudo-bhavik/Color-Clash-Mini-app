@@ -34,14 +34,32 @@ export const CONTRACT_ADDRESSES = {
 };
 
 // Validate critical environment variables
+const validateContractAddress = (address: string | undefined, name: string): boolean => {
+  if (!address || address.startsWith('0x1234') || address.startsWith('0x2345') || address.startsWith('0x3456')) {
+    console.error(`❌ ${name} not configured correctly - using placeholder address. Transactions will fail!`);
+    console.error(`   Please set ${name} in your .env file with your deployed contract address.`);
+    return false;
+  }
+  console.log(`✅ ${name} configured:`, address);
+  return true;
+};
+
 if (!import.meta.env.VITE_CC_TOKEN_ADDRESS) {
   console.warn('⚠️  VITE_CC_TOKEN_ADDRESS not set - using placeholder address');
+} else {
+  validateContractAddress(import.meta.env.VITE_CC_TOKEN_ADDRESS, 'VITE_CC_TOKEN_ADDRESS');
 }
+
 if (!import.meta.env.VITE_REWARD_DISTRIBUTOR_ADDRESS) {
   console.warn('⚠️  VITE_REWARD_DISTRIBUTOR_ADDRESS not set - using placeholder address');
+} else {
+  validateContractAddress(import.meta.env.VITE_REWARD_DISTRIBUTOR_ADDRESS, 'VITE_REWARD_DISTRIBUTOR_ADDRESS');
 }
+
 if (!import.meta.env.VITE_SCORE_RECORDER_ADDRESS) {
   console.warn('⚠️  VITE_SCORE_RECORDER_ADDRESS not set - using placeholder address');
+} else {
+  validateContractAddress(import.meta.env.VITE_SCORE_RECORDER_ADDRESS, 'VITE_SCORE_RECORDER_ADDRESS');
 }
 // Bot Difficulty Presets - Easy to configure different difficulty levels
 export const BOT_DIFFICULTY_PRESETS = {

@@ -78,6 +78,30 @@ export async function recordScoreOnChain(
       };
     }
 
+    // Validate contract address format
+    if (!ethers.isAddress(contractAddress)) {
+      return {
+        success: false,
+        error: 'Invalid contract address format'
+      };
+    }
+
+    // Verify signer address matches the provided wallet address
+    const signerAddress = await signer.getAddress();
+    if (signerAddress.toLowerCase() !== walletAddress.toLowerCase()) {
+      return {
+        success: false,
+        error: 'Signer address does not match wallet address'
+      };
+    }
+
+    console.log('Recording score on-chain:', {
+      walletAddress: signerAddress,
+      score,
+      contractAddress,
+      playerName
+    });
+
     // Create contract instance with user's signer
     const contract = new ethers.Contract(
       contractAddress,
@@ -85,9 +109,25 @@ export async function recordScoreOnChain(
       signer
     );
 
+    // Estimate gas before sending transaction
+    try {
+      const gasEstimate = await contract.recordScore.estimateGas(score, playerName);
+      console.log('Estimated gas:', gasEstimate.toString());
+    } catch (estimateError) {
+      console.error('Gas estimation failed:', estimateError);
+      return {
+        success: false,
+        error: 'Transaction would fail - contract may not be deployed or configured correctly',
+        details: estimateError instanceof Error ? estimateError.message : String(estimateError)
+      };
+    }
+
     // Send transaction (user pays gas)
     const tx = await contract.recordScore(score, playerName);
+    console.log('Transaction sent:', tx.hash);
+
     const receipt = await tx.wait();
+    console.log('Transaction confirmed:', receipt.hash, 'Block:', receipt.blockNumber);
 
     return {
       success: true,
@@ -98,9 +138,22 @@ export async function recordScoreOnChain(
 
   } catch (error) {
     console.error('Error recording score on-chain:', error);
+
+    let errorMessage = 'Failed to record score on-chain';
+
+    if (error instanceof Error) {
+      if (error.message.includes('user rejected')) {
+        errorMessage = 'Transaction was rejected by user';
+      } else if (error.message.includes('insufficient funds')) {
+        errorMessage = 'Insufficient funds for gas fees';
+      } else if (error.message.includes('network')) {
+        errorMessage = 'Network error - please check your connection';
+      }
+    }
+
     return {
       success: false,
-      error: 'Failed to record score on-chain',
+      error: errorMessage,
       details: error instanceof Error ? error.message : String(error)
     };
   }
